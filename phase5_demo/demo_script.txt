@@ -1,0 +1,134 @@
+CLINEXA AI — 3 MINUTE DEMO VIDEO SCRIPT
+==========================================
+
+WHAT TO RECORD:
+Your screen showing Prompt Opinion platform
+with Clinexa AI running live.
+
+==========================================
+0:00 - 0:30 | THE PROBLEM
+==========================================
+
+Say this:
+
+"Every year, thousands of patients are
+harmed by delayed triage and diagnostic
+errors. Emergency nurses handle 40+
+patients at once with no AI support.
+
+Clinexa AI changes that.
+
+It assembles a team of 6 AI agents that
+work together like a hospital team —
+in seconds — for every single patient."
+
+==========================================
+0:30 - 1:30 | LIVE DEMO
+==========================================
+
+DO THIS ON SCREEN:
+
+1. Open Prompt Opinion platform
+2. Go to Marketplace
+3. Find Clinexa AI
+4. Click Invoke
+5. Enter Patient SYN-10001:
+   - Age 68, male
+   - Chest pain, shortness of breath
+   - Heart rate 125, BP 185/110
+   - Medications: warfarin + aspirin
+   - Pain scale: 9
+
+6. Show the pipeline running:
+   - Agent 1: Intake parsing symptoms
+   - Agent 2: Risk = HIGH (73% confidence)
+   - Agent 3: XAI explanation appears
+   - Agent 4: Treatment plan generated
+   - Agent 5: DRUG ALERT fires
+             warfarin + aspirin = HIGH risk
+   - Agent 6: FHIR bundle produced
+
+SAY THIS WHILE SHOWING:
+
+"Watch 6 agents collaborate in real time.
+
+The intake agent reads the symptoms.
+The ML model predicts HIGH risk.
+The XAI agent explains exactly why.
+The treatment agent recommends
+immediate emergency response.
+
+And here — the drug safety agent
+catches a dangerous interaction:
+warfarin plus aspirin — high bleeding
+risk — flagged automatically.
+
+Finally the FHIR agent produces a
+complete HL7 R4 clinical bundle
+ready for any EHR system."
+
+==========================================
+1:30 - 2:30 | WHAT MAKES IT DIFFERENT
+==========================================
+
+SHOW ON SCREEN:
+
+1. The SHAP explanation output
+   - Show top 5 factors
+   - Show confidence scores
+   - Show plain English explanation
+
+2. The SOAP note output
+   - S, O, A, P sections
+   - AI risk level included
+
+3. The FHIR bundle JSON
+   - Show resourceType Bundle
+   - Show synthetic data tag
+   - Show no PHI present
+
+SAY THIS:
+
+"Unlike rule-based systems, Clinexa AI
+uses a trained RandomForest ML model
+on 1000 synthetic patients.
+
+Every decision is explained using SHAP —
+so clinicians know exactly why the AI
+flagged something. No black boxes.
+
+Output is FHIR R4 compliant — ready
+to plug into any hospital EHR system.
+
+Zero real patient data. Fully synthetic.
+Fully safe. Fully standards compliant."
+
+==========================================
+2:30 - 3:00 | IMPACT STATEMENT
+==========================================
+
+SAY THIS:
+
+"Clinexa AI is not a demo.
+
+It is a production-ready multi-agent
+system built on open standards:
+FHIR, MCP, A2A, and SHAP.
+
+6 agents. 4 MCP superpowers.
+Real ML. Real explainability.
+Real clinical output.
+
+Built for the last mile of healthcare AI."
+
+==========================================
+RECORDING TIPS
+==========================================
+
+- Use OBS Studio (free) to record screen
+- Record at 1080p
+- Speak slowly and clearly
+- Upload to YouTube as Unlisted
+- Paste YouTube link in Devpost
+
+==========================================
