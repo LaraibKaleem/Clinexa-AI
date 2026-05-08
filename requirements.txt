@@ -7,5 +7,4 @@ scikit-learn
 joblib
 shap
 requests
-python-dotenv
 httpx
