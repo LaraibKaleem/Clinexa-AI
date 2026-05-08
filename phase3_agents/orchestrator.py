@@ -34,12 +34,31 @@ class TriageRequest(BaseModel):
 
 async def call_mcp(server, tool, data):
     url = f"{MCP_URLS[server]}/tools/{tool}"
+
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.post(url, json=data)
+
+            if r.status_code != 200:
+                return {"error": f"HTTP {r.status_code}", "fallback": True}
+
             return r.json()
+
     except Exception as e:
-        return {"error": str(e), "fallback": True}
+        return {
+            "error": str(e),
+            "fallback": True,
+            "server": server,
+            "tool": tool
+        }
+# async def call_mcp(server, tool, data):
+#     url = f"{MCP_URLS[server]}/tools/{tool}"
+#     try:
+#         async with httpx.AsyncClient(timeout=15.0) as client:
+#             r = await client.post(url, json=data)
+#             return r.json()
+#     except Exception as e:
+#         return {"error": str(e), "fallback": True}
 
 async def intake_agent(req):
     print(f"\n[Agent 1] Intake Agent — {req.patient_id}")
@@ -201,45 +220,66 @@ async def fhir_formatter_agent(req, risk_result, xai_result,
         "data_type": "synthetic"
     }
 
-
 @app.post("/triage")
 async def run_triage(req: TriageRequest):
-    start = datetime.utcnow()
-    print(f"\n{'='*60}")
-    print(f"CLINEXA AI — PIPELINE STARTED — {req.patient_id}")
-    print(f"{'='*60}")
-    intake    = await intake_agent(req)
-    risk      = await risk_agent(req, intake)
-    xai       = await xai_agent(risk)
-    treatment = await treatment_agent(req, risk, xai)
-    drug      = await drug_safety_agent(req, treatment)
-    fhir      = await fhir_formatter_agent(req, risk, xai, treatment, drug)
-    elapsed = (datetime.utcnow() - start).total_seconds()
-    return {
-        "clinexa_version": "1.0.0",
-        "timestamp": start.isoformat() + "Z",
-        "processing_time_seconds": round(elapsed, 2),
+    try:
+        start = datetime.utcnow()
+        intake    = await intake_agent(req)
+        risk      = await risk_agent(req, intake)
+        xai       = await xai_agent(risk)
+        treatment = await treatment_agent(req, risk, xai)
+        drug      = await drug_safety_agent(req, treatment)
+        fhir      = await fhir_formatter_agent(req, risk, xai, treatment, drug)
+        # return {"status": "success"}
+        return {
+        "status": "debug_ok",
         "patient_id": req.patient_id,
-        "final_risk": risk.get("predicted_risk"),
-        "confidence": risk.get("confidence", {}),
-        "safety_cleared": drug.get("overall_safe"),
-        "agents": {
-            "1_intake":      intake,
-            "2_risk":        risk,
-            "3_xai":         xai,
-            "4_treatment":   treatment,
-            "5_drug_safety": drug,
-            "6_fhir":        fhir,
-        },
-        "summary": {
-            "risk_level": risk.get("predicted_risk"),
-            "chief_complaint": intake.get("chief_complaint"),
-            "plain_english": xai.get("plain_english"),
-            "top_recommendations": treatment.get("recommendations", [])[:3],
-            "drug_alerts": drug.get("alerts", []),
-            "fhir_bundle_ready": True
-        }
+        "message": "orchestrator is alive"
     }
+
+    except Exception as e:
+        return {
+            "status": "failed",
+            "error": str(e)
+        }
+# @app.post("/triage")
+# async def run_triage(req: TriageRequest):
+#     start = datetime.utcnow()
+#     print(f"\n{'='*60}")
+#     print(f"CLINEXA AI — PIPELINE STARTED — {req.patient_id}")
+#     print(f"{'='*60}")
+#     intake    = await intake_agent(req)
+#     risk      = await risk_agent(req, intake)
+#     xai       = await xai_agent(risk)
+#     treatment = await treatment_agent(req, risk, xai)
+#     drug      = await drug_safety_agent(req, treatment)
+#     fhir      = await fhir_formatter_agent(req, risk, xai, treatment, drug)
+#     elapsed = (datetime.utcnow() - start).total_seconds()
+#     return {
+#         "clinexa_version": "1.0.0",
+#         "timestamp": start.isoformat() + "Z",
+#         "processing_time_seconds": round(elapsed, 2),
+#         "patient_id": req.patient_id,
+#         "final_risk": risk.get("predicted_risk"),
+#         "confidence": risk.get("confidence", {}),
+#         "safety_cleared": drug.get("overall_safe"),
+#         "agents": {
+#             "1_intake":      intake,
+#             "2_risk":        risk,
+#             "3_xai":         xai,
+#             "4_treatment":   treatment,
+#             "5_drug_safety": drug,
+#             "6_fhir":        fhir,
+#         },
+#         "summary": {
+#             "risk_level": risk.get("predicted_risk"),
+#             "chief_complaint": intake.get("chief_complaint"),
+#             "plain_english": xai.get("plain_english"),
+#             "top_recommendations": treatment.get("recommendations", [])[:3],
+#             "drug_alerts": drug.get("alerts", []),
+#             "fhir_bundle_ready": True
+#         }
+#     }
 
 @app.get("/health")
 def health():
