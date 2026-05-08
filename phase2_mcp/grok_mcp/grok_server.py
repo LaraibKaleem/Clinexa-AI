@@ -138,7 +138,7 @@ P: {plans.get(risk,'Evaluate per protocol.')}"""
 
 @app.get("/")
 def root():
-    return {"status": "running"}
+    return {"status": "running Clinexa Grok LLM MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

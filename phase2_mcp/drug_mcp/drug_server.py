@@ -101,7 +101,7 @@ def check_interactions_local(drugs):
 
 @app.get("/")
 def root():
-    return {"status": "running"}
+    return {"status": "running Clinexa Drug Safety MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

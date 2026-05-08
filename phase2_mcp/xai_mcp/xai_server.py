@@ -75,7 +75,7 @@ def encode_and_predict(patient_data):
 
 @app.get("/")
 def root():
-    return {"status": "running"}
+    return {"status": "running Clinexa XAI Explainer MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():
