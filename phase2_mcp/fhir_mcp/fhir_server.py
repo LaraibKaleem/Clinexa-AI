@@ -8,6 +8,7 @@ from typing import List
 import json, uuid, random
 from datetime import datetime
 
+
 app = FastAPI(title="Clinexa FHIR MCP Server", version="1.0.0")
 
 MCP_MANIFEST = {
@@ -232,7 +233,7 @@ if __name__ == "__main__":
     # import uvicorn
     # uvicorn.run(app, host="0.0.0.0", port=8001)
     import uvicorn
-    import os
+    # import os
     # port = int(os.getenv("PORT", 8001))
-    uvicorn.run("phase2_mcp.fhir_mcp.fhir_server:app", host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
     
