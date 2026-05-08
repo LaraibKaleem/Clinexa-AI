@@ -99,6 +99,9 @@ def check_interactions_local(drugs):
                 interactions.append({"drugs": list(pair_rev), **KNOWN_INTERACTIONS[pair_rev]})
     return interactions
 
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

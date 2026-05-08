@@ -73,6 +73,9 @@ def encode_and_predict(patient_data):
             df[col] = le.transform([val]) if val in le.classes_ else [0]
     return df[features]
 
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

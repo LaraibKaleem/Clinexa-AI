@@ -136,6 +136,9 @@ P: {plans.get(risk,'Evaluate per protocol.')}"""
         })
     return "Clinical analysis complete."
 
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

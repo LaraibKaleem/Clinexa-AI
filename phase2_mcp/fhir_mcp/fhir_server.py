@@ -157,6 +157,9 @@ def make_fhir_medications(patient_id, meds):
         "subject": {"reference": f"Patient/{patient_id}"}
     } for med in meds]
 
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 @app.get("/.well-known/mcp.json")
 def get_manifest():
