@@ -12,8 +12,14 @@ from typing import Optional, List
 
 app = FastAPI(title="Clinexa AI Orchestrator", version="1.0.0")
 
+# MCP_URLS = {
+#     "fhir":  "http://localhost:8001",
+#     "drug":  "http://localhost:8002",
+#     "xai":   "http://localhost:8003",
+#     "grok":  "http://localhost:8004",
+# }
 MCP_URLS = {
-    "fhir":  "http://localhost:8001",
+    "fhir":  "clinexa-ai-fhir-mcp.up.railway.app",
     "drug":  "http://localhost:8002",
     "xai":   "http://localhost:8003",
     "grok":  "http://localhost:8004",
