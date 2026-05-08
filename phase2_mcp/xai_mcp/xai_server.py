@@ -11,7 +11,9 @@ from pathlib import Path
 
 app = FastAPI(title="Clinexa XAI Explainer MCP", version="1.0.0")
 
-MODEL_DIR = Path("phase1_ml/models")
+# MODEL_DIR = Path("phase1_ml/models")
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+MODEL_DIR = BASE_DIR / "phase1_ml" / "models"
 
 try:
     model       = joblib.load(MODEL_DIR / "risk_model.joblib")
@@ -165,7 +167,7 @@ def get_confidence_breakdown(body: dict):
 #     uvicorn.run(app, host="0.0.0.0", port=8003)
 if __name__ == "__main__":
     import uvicorn
-    import os
+    # import os
     # port = int(os.getenv("PORT", 8003))
     # uvicorn.run(app, host="0.0.0.0", port=port)
     uvicorn.run(app, host="0.0.0.0", port=8003)
