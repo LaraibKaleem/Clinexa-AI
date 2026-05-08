@@ -19,10 +19,10 @@ app = FastAPI(title="Clinexa AI Orchestrator", version="1.0.0")
 #     "grok":  "http://localhost:8004",
 # }
 MCP_URLS = {
-    "fhir":  "clinexa-ai-fhir-mcp.up.railway.app",
-    "drug":  "http://localhost:8002",
-    "xai":   "http://localhost:8003",
-    "grok":  "http://localhost:8004",
+    "fhir":  "fhir-production-mcp.up.railway.app",
+    "drug":  "drug-production-mcp.up.railway.app",
+    "xai":   "xai-production-mcp.up.railway.app",
+    "grok":  "grok-production-mcp.up.railway.app",
 }
 
 class TriageRequest(BaseModel):
