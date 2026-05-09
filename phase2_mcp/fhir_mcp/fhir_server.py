@@ -162,7 +162,14 @@ def make_fhir_medications(patient_id, meds):
 def root():
     return {"status": "running Clinexa FHIR MCP Server"}
 
-@app.get("/.well-known/mcp.json")
+# @app.get("/.well-known/mcp.json")
+# def get_manifest():
+#     return MCP_MANIFEST
+
+@app.api_route(
+    "/.well-known/mcp.json",
+    methods=["GET", "POST"]
+)
 def get_manifest():
     return MCP_MANIFEST
 
