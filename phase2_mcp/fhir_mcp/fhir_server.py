@@ -11,7 +11,7 @@ import json, uuid, random
 from datetime import datetime
 
 
-app = FastAPI(title="Clinexa FHIR MCP Server", version="1.0.0")
+app = FastAPI(title="Clinexa AI FHIR MCP Server", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,8 +22,8 @@ app.add_middleware(
 )
 
 MCP_MANIFEST = {
-    "name": "clinexa-fhir-mcp",
-    "display_name": "Clinexa FHIR Patient Data",
+    "name": "clinexa-ai-fhir-mcp",
+    "display_name": "Clinexa AI FHIR Patient Data",
     "description": "Retrieves synthetic FHIR R4 patient records",
     "version": "1.0.0",
     "tools": [
@@ -230,7 +230,7 @@ def make_fhir_medications(patient_id, meds):
 
 @app.get("/")
 def root():
-    return {"status": "running Clinexa FHIR MCP Server"}
+    return {"status": "running Clinexa AI FHIR MCP Server"}
 
 @app.get("/.well-known/mcp.json")
 def get_manifest():
@@ -263,7 +263,7 @@ def get_manifest():
 @app.get("/health")
 
 def health():
-    return {"status": "ok", "server": "clinexa-fhir-mcp"}
+    return {"status": "ok", "server": "clinexa-ai-fhir-mcp"}
 
 @app.post("/tools/get_patient")
 def get_patient(body: dict):

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import httpx, json, os
 
-app = FastAPI(title="Clinexa Grok LLM MCP", version="1.0.0")
+app = FastAPI(title="Clinexa AI Grok LLM MCP", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,8 +21,8 @@ GROK_MODEL = "grok-3-mini"
 
 MCP_MANIFEST = {
     "schema_version": "1.0",
-    "name": "clinexa-grok-llm-mcp",
-    "display_name": "Clinexa Grok LLM Engine",
+    "name": "clinexa-ai-grok-llm-mcp",
+    "display_name": "Clinexa AI Grok LLM Engine",
     "description": "Clinical text generation using xAI Grok.",
     "version": "1.0.0",
     "tools": [
@@ -145,7 +145,7 @@ P: {plans.get(risk,'Evaluate per protocol.')}"""
 
 @app.get("/")
 def root():
-    return {"status": "running Clinexa Grok LLM MCP"}
+    return {"status": "running Clinexa AI Grok LLM MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

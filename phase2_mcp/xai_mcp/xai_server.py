@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-app = FastAPI(title="Clinexa XAI Explainer MCP", version="1.0.0")
+app = FastAPI(title="Clinexa AI XAI Explainer MCP", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,8 +36,8 @@ except Exception as e:
 
 MCP_MANIFEST = {
     "schema_version": "1.0",
-    "name": "clinexa-xai-mcp",
-    "display_name": "Clinexa XAI Explainer",
+    "name": "clinexa-ai--xai-mcp",
+    "display_name": "Clinexa AI XAI Explainer",
     "description": "SHAP-based explanations for AI risk predictions.",
     "version": "1.0.0",
     "tools": [
@@ -84,7 +84,7 @@ def encode_and_predict(patient_data):
 
 @app.get("/")
 def root():
-    return {"status": "running Clinexa XAI Explainer MCP"}
+    return {"status": "running Clinexa AI XAI Explainer MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():

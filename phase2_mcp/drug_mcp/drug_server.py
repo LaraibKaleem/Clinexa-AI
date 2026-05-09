@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
-app = FastAPI(title="Clinexa Drug Safety MCP", version="1.0.0")
+app = FastAPI(title="Clinexa AI Drug Safety MCP", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,8 +18,8 @@ app.add_middleware(
 
 MCP_MANIFEST = {
     "schema_version": "1.0",
-    "name": "clinexa-drug-safety-mcp",
-    "display_name": "Clinexa Drug Safety Checker",
+    "name": "clinexa-ai-drug-safety-mcp",
+    "display_name": "Clinexa AI Drug Safety Checker",
     "description": "Checks drug interactions, contraindications, and allergy risks.",
     "version": "1.0.0",
     "tools": [
@@ -109,7 +109,7 @@ def check_interactions_local(drugs):
 
 @app.get("/")
 def root():
-    return {"status": "running Clinexa Drug Safety MCP"}
+    return {"status": "running Clinexa AI Drug Safety MCP"}
 
 @app.get("/.well-known/mcp.json")
 def manifest():
@@ -117,7 +117,7 @@ def manifest():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "server": "clinexa-drug-safety-mcp"}
+    return {"status": "ok", "server": "clinexa-ai-drug-safety-mcp"}
 
 @app.post("/tools/check_drug_interactions")
 async def check_drug_interactions(body: dict):
