@@ -239,23 +239,29 @@ def root():
 # def get_manifest():
 #     return MCP_MANIFEST
 
-@app.api_route(
-    "/.well-known/mcp.json",
-    methods=["GET", "POST"]
-)
-async def get_manifest():
-    return JSONResponse(
-        content=MCP_MANIFEST,
-        media_type="application/json"
-    )
+# @app.api_route(
+#     "/.well-known/mcp.json",
+#     methods=["GET", "POST"]
+# )
 
-@app.api_route(
-    "/mcp",
-    methods=["GET", "POST"]
-)
+# async def get_manifest():
+#     return JSONResponse(
+#         content=MCP_MANIFEST,
+        # media_type="application/json"
+    # )
+
+# @app.api_route(
+#     "/mcp",
+#     methods=["GET", "POST"]
+# )
+
 async def mcp_root():
-    return JSONResponse(content=MCP_MANIFEST)
+    # return JSONResponse(content=MCP_MANIFEST)
+    return MCP_MANIFEST
+    
+
 @app.get("/health")
+
 def health():
     return {"status": "ok", "server": "clinexa-fhir-mcp"}
 
