@@ -249,6 +249,12 @@ async def get_manifest():
         media_type="application/json"
     )
 
+@app.api_route(
+    "/mcp",
+    methods=["GET", "POST"]
+)
+async def mcp_root():
+    return JSONResponse(content=MCP_MANIFEST)
 @app.get("/health")
 def health():
     return {"status": "ok", "server": "clinexa-fhir-mcp"}
