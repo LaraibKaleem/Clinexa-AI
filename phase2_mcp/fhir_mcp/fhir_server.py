@@ -5,12 +5,21 @@ ALL data is synthetic — zero real PHI
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import json, uuid, random
 from datetime import datetime
 
 
 app = FastAPI(title="Clinexa FHIR MCP Server", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MCP_MANIFEST = {
     "name": "clinexa-fhir-mcp",
