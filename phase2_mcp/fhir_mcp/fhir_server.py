@@ -12,15 +12,16 @@ from datetime import datetime
 app = FastAPI(title="Clinexa FHIR MCP Server", version="1.0.0")
 
 MCP_MANIFEST = {
-    "schema_version": "1.0",
     "name": "clinexa-fhir-mcp",
     "display_name": "Clinexa FHIR Patient Data",
-    "description": "Exposes FHIR R4 synthetic patient data.",
+    "description": "Retrieves synthetic FHIR R4 patient records",
     "version": "1.0.0",
     "tools": [
         {
             "name": "get_patient",
             "description": "Retrieve synthetic FHIR Patient resource by patient ID",
+            "method": "POST",
+            "path": "/tools/get_patient",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -32,6 +33,8 @@ MCP_MANIFEST = {
         {
             "name": "get_observations",
             "description": "Get vital signs for a patient",
+            "method": "POST",
+            "path": "/tools/get_observations",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -43,6 +46,8 @@ MCP_MANIFEST = {
         {
             "name": "get_conditions",
             "description": "Get active conditions for a patient",
+            "method": "POST",
+            "path": "/tools/get_conditions",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -53,7 +58,9 @@ MCP_MANIFEST = {
         },
         {
             "name": "get_medications",
-            "description": "Get current medications for a patient",
+            "description": "Get medications for a patient",
+            "method": "POST",
+            "path": "/tools/get_medications",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -61,23 +68,76 @@ MCP_MANIFEST = {
                 },
                 "required": ["patient_id"]
             }
-        },
-        {
-            "name": "create_triage_bundle",
-            "description": "Create a FHIR Bundle containing triage assessment",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "patient_id": {"type": "string"},
-                    "risk_level": {"type": "string"},
-                    "assessment_text": {"type": "string"},
-                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                },
-                "required": ["patient_id", "risk_level", "assessment_text"]
-            }
         }
     ]
 }
+# MCP_MANIFEST = {
+#     "schema_version": "1.0",
+#     "name": "clinexa-fhir-mcp",
+#     "display_name": "Clinexa FHIR Patient Data",
+#     "description": "Exposes FHIR R4 synthetic patient data.",
+#     "version": "1.0.0",
+#     "tools": [
+#         {
+#             "name": "get_patient",
+#             "description": "Retrieve synthetic FHIR Patient resource by patient ID",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"}
+#                 },
+#                 "required": ["patient_id"]
+#             }
+#         },
+#         {
+#             "name": "get_observations",
+#             "description": "Get vital signs for a patient",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"}
+#                 },
+#                 "required": ["patient_id"]
+#             }
+#         },
+#         {
+#             "name": "get_conditions",
+#             "description": "Get active conditions for a patient",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"}
+#                 },
+#                 "required": ["patient_id"]
+#             }
+#         },
+#         {
+#             "name": "get_medications",
+#             "description": "Get current medications for a patient",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"}
+#                 },
+#                 "required": ["patient_id"]
+#             }
+#         },
+#         {
+#             "name": "create_triage_bundle",
+#             "description": "Create a FHIR Bundle containing triage assessment",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"},
+#                     "risk_level": {"type": "string"},
+#                     "assessment_text": {"type": "string"},
+#                     "recommendations": {"type": "array", "items": {"type": "string"}}
+#                 },
+#                 "required": ["patient_id", "risk_level", "assessment_text"]
+#             }
+#         }
+#     ]
+# }
 
 SYNTHETIC_PATIENTS = {
     "SYN-10001": {
