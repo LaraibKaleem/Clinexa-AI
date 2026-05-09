@@ -4,10 +4,17 @@ Clinical text generation using xAI Grok
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import httpx, json, os
 
 app = FastAPI(title="Clinexa Grok LLM MCP", version="1.0.0")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 GROK_API_KEY = os.getenv("GROK_API_KEY", "YOUR_GROK_API_KEY_HERE")
 GROK_BASE_URL = "https://api.x.ai/v1"
 GROK_MODEL = "grok-3-mini"

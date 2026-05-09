@@ -4,9 +4,17 @@ Checks drug interactions and allergy risks
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 app = FastAPI(title="Clinexa Drug Safety MCP", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MCP_MANIFEST = {
     "schema_version": "1.0",

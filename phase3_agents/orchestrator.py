@@ -7,6 +7,7 @@ Intake → Risk → XAI → Treatment → Drug Safety → FHIR Output
 import json, httpx, asyncio
 from datetime import datetime
 from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 

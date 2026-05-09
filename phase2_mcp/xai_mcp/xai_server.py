@@ -4,13 +4,20 @@ Loads trained model + SHAP and exposes explanation tools
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
 
 app = FastAPI(title="Clinexa XAI Explainer MCP", version="1.0.0")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # MODEL_DIR = Path("phase1_ml/models")
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MODEL_DIR = BASE_DIR / "phase1_ml" / "models"
