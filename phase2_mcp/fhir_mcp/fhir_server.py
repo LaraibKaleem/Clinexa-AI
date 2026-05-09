@@ -4,10 +4,10 @@ ALL data is synthetic — zero real PHI
 """
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from typing import List
 import json, uuid, random
 from datetime import datetime
-from fastapi.responses import JSONResponse
 
 
 app = FastAPI(title="Clinexa FHIR MCP Server", version="1.0.0")
@@ -227,16 +227,18 @@ def root():
 # def get_manifest():
 #     return MCP_MANIFEST
 
+# def get_manifest():
+#     return MCP_MANIFEST
+
 @app.api_route(
     "/.well-known/mcp.json",
     methods=["GET", "POST"]
 )
-
-def get_manifest():
-    return JSONResponse(content=MCP_MANIFEST)
-
-# def get_manifest():
-#     return MCP_MANIFEST
+async def get_manifest():
+    return JSONResponse(
+        content=MCP_MANIFEST,
+        media_type="application/json"
+    )
 
 @app.get("/health")
 def health():
