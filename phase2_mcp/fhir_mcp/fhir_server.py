@@ -132,7 +132,7 @@ if __name__ == "__main__":
     
     
 
-    mcp_app = mcp.sse_app()
+    app  = mcp.sse_app()
 
     # app = Starlette(routes=[
     #     Route("/", endpoint=health_check),
