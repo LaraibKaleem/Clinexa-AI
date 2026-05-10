@@ -137,26 +137,21 @@ if __name__ == "__main__":
     # app = Starlette(routes=[
     #     Route("/", endpoint=health_check),
     # ])
-    app = Starlette(
-    routes=[
-        Route("/", endpoint=health_check),
-        Mount("/", app=mcp_app)
-    ],
-    middleware=[
-        Middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=["*"]
-        )
-    ]
-    )
+    # app = Starlette(
+    # routes=[
+    #     Route("/", endpoint=health_check),
+    #     Mount("/", app=mcp_app)
+    # ],
+    # middleware=[
+    #     Middleware(
+    #         TrustedHostMiddleware,
+    #         allowed_hosts=["*"]
+    #     )
+    # ]
+    # )
 
-    app.routes.append(Mount("/", app=mcp_app))
-    app.router.routes.extend(mcp_app.routes)
-
-    port = int(os.getenv("PORT", 8001))
-
-    print(f"Running on port {port}", flush=True)
-
+    # app.routes.append(Mount("/", app=mcp_app))
+    # app.router.routes.extend(mcp_app.routes)
     uvicorn.run(app, host="0.0.0.0", port=8001)
 
 # if __name__ == "__main__":
