@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     print(f"Running on port {port}", flush=True)
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 
 # if __name__ == "__main__":
 #     uvicorn.run(mcp.sse_app(), host="0.0.0.0", port=8001)
