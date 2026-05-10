@@ -193,6 +193,7 @@ app = Starlette(routes=[
     Route("/", endpoint=health_check),
     Route("/sse", endpoint=handle_sse),
     Route("/messages", endpoint=handle_messages, methods=["POST"]),
+    Mount("/mcp", app=mcp.sse_app()),
 ])
 # async def handle_sse(request):
 #     async with sse.connect_session(request.scope, request.receive, request._send) as session:
