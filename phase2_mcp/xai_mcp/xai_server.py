@@ -86,7 +86,9 @@ def encode_and_predict(patient_data):
 def root():
     return {"status": "running Clinexa AI XAI Explainer MCP"}
 
+# @app.get("/.well-known/mcp.json")
 @app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
 def manifest():
     return MCP_MANIFEST
 

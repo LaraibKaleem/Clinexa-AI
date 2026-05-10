@@ -111,7 +111,9 @@ def check_interactions_local(drugs):
 def root():
     return {"status": "running Clinexa AI Drug Safety MCP"}
 
+# @app.get("/.well-known/mcp.json")
 @app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
 def manifest():
     return MCP_MANIFEST
 

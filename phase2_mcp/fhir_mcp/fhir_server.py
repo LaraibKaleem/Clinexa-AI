@@ -233,8 +233,13 @@ def root():
     return {"status": "running Clinexa AI FHIR MCP Server"}
 
 @app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
 def get_manifest():
     return MCP_MANIFEST
+
+# @app.get("/.well-known/mcp.json")
+# def get_manifest():
+#     return MCP_MANIFEST
 
 # def get_manifest():
 #     return MCP_MANIFEST
