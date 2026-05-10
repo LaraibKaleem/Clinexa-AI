@@ -1,11 +1,11 @@
 """
-Clinexa AI — FHIR R4 Server (SIMPLE SSE VERSION)
+Clinexa AI — FHIR R4 Server (WORKING — fastmcp 3.2.4)
+ALL data is synthetic — zero real PHI
 """
 
-from mcp.server.fastmcp import FastMCP
-import json, uuid
-# from datetime import datetime
-import uvicorn
+from fastmcp import FastMCP
+import json, uuid, os
+from datetime import datetime
 
 mcp = FastMCP("clinexa-ai-fhir")
 
@@ -40,7 +40,11 @@ def make_fhir_patient(p):
         "identifier": [{"system": "urn:clinexa:synthetic", "value": p["id"]}],
         "name": [{"use": "official", "text": p["name"]}],
         "gender": p["gender"],
-        "birthDate": p["dob"]
+        "birthDate": p["dob"],
+        "extension": [{
+            "url": "http://promptopinion.ai/sharp/patient-context",
+            "valueString": json.dumps({"patientId": p["id"], "phi": False})
+        }]
     }
 
 def make_fhir_observations(patient_id, vitals):
@@ -60,20 +64,25 @@ def make_fhir_observations(patient_id, vitals):
             "status": "final",
             "code": {"coding": [{"system": "http://loinc.org", "code": code, "display": display}]},
             "subject": {"reference": f"Patient/{patient_id}"},
-            # "effectiveDateTime": datetime.utcnow().isoformat() + "Z",
+            "effectiveDateTime": datetime.utcnow().isoformat() + "Z",
             "valueQuantity": {"value": vitals[key], "unit": unit}
         })
     return observations
 
 @mcp.tool()
 def get_patient(patient_id: str) -> str:
-    """Retrieve FHIR Patient"""
-    p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
+    """Retrieve synthetic FHIR Patient resource by patient ID"""
+    p = SYNTHETIC_PATIENTS.get(patient_id, {
+        "id": patient_id, "name": f"Synthetic Patient {patient_id}", "age": 45,
+        "gender": "unknown", "dob": "1980-01-01",
+        "conditions": ["Unknown"], "medications": ["None"],
+        "vitals": {"hr": 80, "sbp": 120, "dbp": 80, "temp": 37.0, "spo2": 97, "rr": 16}
+    })
     return json.dumps(make_fhir_patient(p))
 
 @mcp.tool()
 def get_observations(patient_id: str) -> str:
-    """Get vital signs"""
+    """Get vital signs for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
     bundle = {
         "resourceType": "Bundle", "type": "searchset",
@@ -83,80 +92,54 @@ def get_observations(patient_id: str) -> str:
 
 @mcp.tool()
 def get_conditions(patient_id: str) -> str:
-    """Get conditions"""
+    """Get active conditions for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
     bundle = {
         "resourceType": "Bundle", "type": "searchset",
-        "entry": [{"resourceType": "Condition", "id": str(uuid.uuid4())[:8], "code": {"display": c}} for c in p["conditions"]]
+        "entry": [{"resourceType": "Condition", "id": str(uuid.uuid4())[:8], "clinicalStatus": {"coding": [{"code": "active"}]}, "code": {"coding": [{"display": c}]}, "subject": {"reference": f"Patient/{patient_id}"}} for c in p["conditions"]]
     }
     return json.dumps(bundle)
 
 @mcp.tool()
 def get_medications(patient_id: str) -> str:
-    """Get medications"""
+    """Get medications for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
     bundle = {
         "resourceType": "Bundle", "type": "searchset",
-        "entry": [{"resourceType": "MedicationRequest", "id": str(uuid.uuid4())[:8], "medicationCodeableConcept": {"text": m}} for m in p["medications"]]
+        "entry": [{"resourceType": "MedicationRequest", "id": str(uuid.uuid4())[:8], "status": "active", "intent": "order", "medicationCodeableConcept": {"text": m}, "subject": {"reference": f"Patient/{patient_id}"}} for m in p["medications"]]
     }
     return json.dumps(bundle)
 
 @mcp.tool()
 def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str, recommendations: list = None) -> str:
-    """Create FHIR Bundle"""
+    """Create a FHIR Bundle containing triage assessment"""
     if recommendations is None:
         recommendations = []
-    return json.dumps({
+    bundle = {
         "resourceType": "Bundle",
         "id": str(uuid.uuid4()),
         "type": "document",
-        # "timestamp": datetime.utcnow().isoformat() + "Z",
-        "entry": [{"resource": {"resourceType": "Composition", "status": "final", "subject": {"reference": f"Patient/{patient_id}"}, "title": "Triage"}}]
-    })
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "meta": {"tag": [{"system": "urn:clinexa:synthetic", "code": "synthetic-data"}]},
+        "entry": [{
+            "resource": {
+                "resourceType": "Composition",
+                "status": "final",
+                "subject": {"reference": f"Patient/{patient_id}"},
+                "title": "Clinexa AI Triage Assessment",
+                "section": [
+                    {"title": "Risk Level", "text": {"div": f"<div>{risk_level}</div>"}},
+                    {"title": "Assessment", "text": {"div": f"<div>{assessment_text}</div>"}},
+                    {"title": "Recommendations", "text": {"div": f"<div>{'<br/>'.join(recommendations)}</div>"}}
+                ]
+            }
+        }]
+    }
+    return json.dumps(bundle)
 
 if __name__ == "__main__":
-    import os
-    import uvicorn
-    from starlette.applications import Starlette
-    from starlette.routing import Route, Mount
-    from starlette.responses import JSONResponse
-    from starlette.middleware import Middleware
-    from starlette.middleware.trustedhost import TrustedHostMiddleware
-
-    async def health_check(request):
-        return JSONResponse({
-            "status": "ok",
-            "server": "clinexa-fhir",
-            "tools": 5
-        })
-    
-    
-
-    app  = mcp.sse_app()
-
-    # app = Starlette(routes=[
-    #     Route("/", endpoint=health_check),
-    # ])
-    # app = Starlette(
-    # routes=[
-    #     Route("/", endpoint=health_check),
-    #     Mount("/", app=mcp_app)
-    # ],
-    # middleware=[
-    #     Middleware(
-    #         TrustedHostMiddleware,
-    #         allowed_hosts=["*"]
-    #     )
-    # ]
-    # )
-
-    # app.routes.append(Mount("/", app=mcp_app))
-    # app.router.routes.extend(mcp_app.routes)
-    uvicorn.run(app, host="0.0.0.0", port=8001)
-
-# if __name__ == "__main__":
-#     uvicorn.run(mcp.sse_app(), host="0.0.0.0", port=8001)
-    
+    port = int(os.getenv("PORT", 8001))
+    mcp.run(transport="http", host="0.0.0.0", port=port)    
     
 # """
 # Clinexa AI — MCP Server 1: FHIR R4 Server (WORKING — Official SDK)
