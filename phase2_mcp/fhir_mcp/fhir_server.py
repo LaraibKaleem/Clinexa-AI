@@ -5,10 +5,9 @@ ALL data is synthetic — zero real PHI
 
 from mcp.server.fastmcp import FastMCP
 from starlette.applications import Starlette
-from starlette.routing import Route
+from starlette.routing import Mount, Route
 from mcp.server.sse import SseServerTransport
 from starlette.responses import JSONResponse
-
 import uvicorn
 import json, uuid, os
 from datetime import datetime
