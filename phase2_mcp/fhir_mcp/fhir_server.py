@@ -149,12 +149,9 @@ if __name__ == "__main__":
         )
     ]
     )
-   
 
-    app.routes.append(
-    Mount("/", app=mcp_app))
-
-     app.router.routes.extend(mcp_app.routes)
+    app.routes.append(Mount("/", app=mcp_app))
+    app.router.routes.extend(mcp_app.routes)
 
     port = int(os.getenv("PORT", 8001))
 
