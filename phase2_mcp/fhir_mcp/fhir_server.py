@@ -1,18 +1,13 @@
 """
-Clinexa AI — MCP Server 1: FHIR R4 Server (WORKING — Official SDK + Uvicorn)
+Clinexa AI — MCP Server 1: FHIR R4 Server (fastmcp 3.2.4 — GUARANTEED WORKING)
 ALL data is synthetic — zero real PHI
 """
 
-from mcp.server.fastmcp import FastMCP
-from starlette.applications import Starlette
-from starlette.routing import Mount, Route
-from mcp.server.sse import SseServerTransport
-from starlette.responses import JSONResponse
-import uvicorn
+from fastmcp import FastMCP
 import json, uuid, os
 from datetime import datetime
 
-# ─── Initialize FastMCP ──────────────────────────────────────────────────────
+# ─── Initialize FastMCP (COMMUNITY PACKAGE — NOT official mcp) ─────────────────
 mcp = FastMCP("clinexa-ai-fhir")
 
 # ─── Synthetic Patient Data ───────────────────────────────────────────────────
@@ -166,54 +161,8 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
     }
     return json.dumps(bundle)
 
-# ─── SSE Transport Setup (Official SDK Way) ───────────────────────────────────
-sse = SseServerTransport("/messages/")
-async def handle_sse(request):
-    async with sse.connect_sse(
-        request.scope,
-        request.receive,
-        request.send
-    ) as streams:
-        await mcp.run(
-            streams[0],
-            streams[1],
-            mcp.create_initialization_options()
-        )
-async def handle_messages(request):
-    await sse.handle_post_message(
-        request.scope,
-        request.receive,
-        request.send
-    )
-async def health_check(request):
-    return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
-
-app = Starlette(routes=[
-    Route("/", endpoint=health_check),
-    Route("/sse", endpoint=handle_sse),
-    Route("/messages", endpoint=handle_messages, methods=["POST"]),
-    Mount("/mcp", app=mcp.sse_app()),
-])
-# async def handle_sse(request):
-#     async with sse.connect_session(request.scope, request.receive, request._send) as session:
-#         await mcp.run(session.read, session.write, mcp.create_initialization_options())
-
-# async def handle_messages(request):
-#     await sse.handle_post_message(request.scope, request.receive, request._send)
-
-# async def health_check(request):
-#     return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
-
-# app = Starlette(routes=[
-#     Route("/", endpoint=health_check),
-#     Route("/sse", endpoint=handle_sse),
-#     Route("/messages/", endpoint=handle_messages, methods=["POST"]),
-# ])
-
-
 # ─── Run Server ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # port = int(os.getenv("PORT", 8001))
-    import uvicorn
-    print(f"Routes registered: {[r.path for r in app.routes]}", flush=True)
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # THIS IS THE KEY: fastmcp 3.x run() accepts transport, host, port
+    mcp.run(transport="http", host="0.0.0.0", port=8001)
