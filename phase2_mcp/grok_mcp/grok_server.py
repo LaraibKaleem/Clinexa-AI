@@ -148,15 +148,19 @@ def root():
     return {"status": "running Clinexa AI Grok LLM MCP"}
 
 # @app.get("/.well-known/mcp.json")
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def manifest():
-    return MCP_MANIFEST
+# @app.post("/.well-known/mcp.json")
+# def manifest():
+#     return MCP_MANIFEST
 
 @app.get("/health")
 def health():
     api_ready = GROK_API_KEY != "YOUR_GROK_API_KEY_HERE"
     return {"status": "ok", "grok_configured": api_ready}
+
+@app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
+def manifest():
+    return MCP_MANIFEST
 
 @app.post("/tools/parse_patient_intake")
 async def parse_patient_intake(body: dict):

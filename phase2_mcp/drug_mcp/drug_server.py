@@ -112,14 +112,18 @@ def root():
     return {"status": "running Clinexa AI Drug Safety MCP"}
 
 # @app.get("/.well-known/mcp.json")
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def manifest():
-    return MCP_MANIFEST
+# @app.post("/.well-known/mcp.json")
+# def manifest():
+#     return MCP_MANIFEST
 
 @app.get("/health")
 def health():
     return {"status": "ok", "server": "clinexa-ai-drug-safety-mcp"}
+
+@app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
+def manifest():
+    return MCP_MANIFEST
 
 @app.post("/tools/check_drug_interactions")
 async def check_drug_interactions(body: dict):

@@ -87,14 +87,18 @@ def root():
     return {"status": "running Clinexa AI XAI Explainer MCP"}
 
 # @app.get("/.well-known/mcp.json")
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def manifest():
-    return MCP_MANIFEST
+# @app.post("/.well-known/mcp.json")
+# def manifest():
+#     return MCP_MANIFEST
 
 @app.get("/health")
 def health():
     return {"status": "ok", "model_loaded": READY}
+
+@app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
+def manifest():
+    return MCP_MANIFEST
 
 @app.post("/tools/explain_prediction")
 def explain_prediction(body: dict):

@@ -232,10 +232,7 @@ def make_fhir_medications(patient_id, meds):
 def root():
     return {"status": "running Clinexa AI FHIR MCP Server"}
 
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def get_manifest():
-    return MCP_MANIFEST
+
 
 # @app.get("/.well-known/mcp.json")
 # def get_manifest():
@@ -269,6 +266,12 @@ def get_manifest():
 
 def health():
     return {"status": "ok", "server": "clinexa-ai-fhir-mcp"}
+
+@app.get("/.well-known/mcp.json")
+@app.post("/.well-known/mcp.json")
+def get_manifest():
+    return MCP_MANIFEST
+
 
 @app.post("/tools/get_patient")
 def get_patient(body: dict):
