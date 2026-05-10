@@ -117,10 +117,11 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
 if __name__ == "__main__":
     import os
     import uvicorn
-
     from starlette.applications import Starlette
-    from starlette.routing import Route
+    from starlette.routing import Route, Mount
     from starlette.responses import JSONResponse
+    from starlette.middleware import Middleware
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
 
     async def health_check(request):
         return JSONResponse({
@@ -128,13 +129,31 @@ if __name__ == "__main__":
             "server": "clinexa-fhir",
             "tools": 5
         })
+    
+    
 
-    app = Starlette(routes=[
-        Route("/", endpoint=health_check),
-    ])
+    # app = Starlette(routes=[
+    #     Route("/", endpoint=health_check),
+    # ])
+    
 
     mcp_app = mcp.sse_app()
 
+    app.routes.append(
+    Mount("/", app=mcp_app))
+
+    app = Starlette(
+    routes=[
+        Route("/", endpoint=health_check),
+        Mount("/", app=mcp_app)
+    ],
+    middleware=[
+        Middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=["*"]
+        )
+    ]
+    )
     app.router.routes.extend(mcp_app.routes)
 
     port = int(os.getenv("PORT", 8001))
