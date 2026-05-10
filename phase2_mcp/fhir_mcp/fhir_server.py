@@ -175,7 +175,11 @@ async def handle_sse(request):
 async def handle_messages(request):
     await sse.handle_post_message(request.scope, request.receive, request._send)
 
+async def health_check(request):
+    return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
+
 app = Starlette(routes=[
+    Route("/", endpoint=health_check),
     Route("/sse", endpoint=handle_sse),
     Route("/messages/", endpoint=handle_messages, methods=["POST"]),
 ])
