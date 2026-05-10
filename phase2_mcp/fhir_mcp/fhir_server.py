@@ -1,14 +1,13 @@
 """
-Clinexa AI — MCP Server 1: FHIR R4 Server (FIXED — Real MCP Protocol)
+Clinexa AI — MCP Server 1: FHIR R4 Server (FIXED — Official MCP SDK)
 ALL data is synthetic — zero real PHI
 """
 
 from mcp.server.fastmcp import FastMCP
-import json, uuid
+import json, uuid, os
 from datetime import datetime
-import os
 
-# ─── Initialize FastMCP (this IS the MCP server) ─────────────────────────────
+# ─── Initialize FastMCP ──────────────────────────────────────────────────────
 mcp = FastMCP("clinexa-ai-fhir")
 
 # ─── Synthetic Patient Data (unchanged) ───────────────────────────────────────
@@ -92,7 +91,7 @@ def make_fhir_medications(patient_id, meds):
         "subject": {"reference": f"Patient/{patient_id}"}
     } for med in meds]
 
-# ─── MCP Tools (decorated with @mcp.tool — this exposes them via MCP protocol) ─
+# ─── MCP Tools ────────────────────────────────────────────────────────────────
 
 @mcp.tool()
 def get_patient(patient_id: str) -> str:
@@ -164,9 +163,9 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
 
 # ─── Run Server ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8001))
-    # SSE transport is most compatible with remote clients (Claude Desktop, etc.)
-    mcp.run(transport="sse", port=port, host="0.0.0.0")
+    # Official SDK: run() takes NO arguments for SSE — it auto-detects or uses env vars
+    # For Railway deployment with PORT env var, use stdio or the CLI
+    mcp.run()
 
 
 
