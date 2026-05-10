@@ -4,7 +4,7 @@ Clinexa AI — FHIR R4 Server (SIMPLE SSE VERSION)
 
 from mcp.server.fastmcp import FastMCP
 import json, uuid
-from datetime import datetime
+# from datetime import datetime
 import uvicorn
 
 mcp = FastMCP("clinexa-ai-fhir")
@@ -60,7 +60,7 @@ def make_fhir_observations(patient_id, vitals):
             "status": "final",
             "code": {"coding": [{"system": "http://loinc.org", "code": code, "display": display}]},
             "subject": {"reference": f"Patient/{patient_id}"},
-            "effectiveDateTime": datetime.utcnow().isoformat() + "Z",
+            # "effectiveDateTime": datetime.utcnow().isoformat() + "Z",
             "valueQuantity": {"value": vitals[key], "unit": unit}
         })
     return observations
@@ -110,28 +110,39 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
         "resourceType": "Bundle",
         "id": str(uuid.uuid4()),
         "type": "document",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        # "timestamp": datetime.utcnow().isoformat() + "Z",
         "entry": [{"resource": {"resourceType": "Composition", "status": "final", "subject": {"reference": f"Patient/{patient_id}"}, "title": "Triage"}}]
     })
 
 if __name__ == "__main__":
+if __name__ == "__main__":
+    import os
+    import uvicorn
+
     from starlette.applications import Starlette
     from starlette.routing import Route
     from starlette.responses import JSONResponse
-    
+
     async def health_check(request):
-        return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
-    
-    # Create main app with health check
+        return JSONResponse({
+            "status": "ok",
+            "server": "clinexa-fhir",
+            "tools": 5
+        })
+
     app = Starlette(routes=[
         Route("/", endpoint=health_check),
     ])
-    
-    # Get MCP SSE app and merge routes
+
     mcp_app = mcp.sse_app()
-    app.router.routes.extend(mcp_app.router.routes)
-    
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    app.router.extend(mcp_app.routes)
+
+    port = int(os.getenv("PORT", 8001))
+
+    print(f"Running on port {port}", flush=True)
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 # if __name__ == "__main__":
 #     uvicorn.run(mcp.sse_app(), host="0.0.0.0", port=8001)
