@@ -113,23 +113,7 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "entry": [{"resource": {"resourceType": "Composition", "status": "final", "subject": {"reference": f"Patient/{patient_id}"}, "title": "Triage"}}]
     })
-from starlette.applications import Starlette
-    from starlette.routing import Route
-    from starlette.responses import JSONResponse
-    
-    async def health_check(request):
-        return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
-    
-    # Create main app with health check
-    app = Starlette(routes=[
-        Route("/", endpoint=health_check),
-    ])
-    
-    # Get MCP SSE app and merge routes
-    mcp_app = mcp.sse_app()
-    app.router.routes.extend(mcp_app.router.routes)
-    
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
 if __name__ == "__main__":
     from starlette.applications import Starlette
     from starlette.routing import Route
@@ -148,7 +132,7 @@ if __name__ == "__main__":
     app.router.routes.extend(mcp_app.router.routes)
     
     uvicorn.run(app, host="0.0.0.0", port=8001)
-    
+
 # if __name__ == "__main__":
 #     uvicorn.run(mcp.sse_app(), host="0.0.0.0", port=8001)
     
