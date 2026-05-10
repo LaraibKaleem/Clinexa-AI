@@ -132,16 +132,11 @@ if __name__ == "__main__":
     
     
 
-    app = Starlette(routes=[
-        Route("/", endpoint=health_check),
-    ])
-    
-
     mcp_app = mcp.sse_app()
 
-    app.routes.append(
-    Mount("/", app=mcp_app))
-
+    # app = Starlette(routes=[
+    #     Route("/", endpoint=health_check),
+    # ])
     app = Starlette(
     routes=[
         Route("/", endpoint=health_check),
@@ -154,7 +149,12 @@ if __name__ == "__main__":
         )
     ]
     )
-    app.router.routes.extend(mcp_app.routes)
+   
+
+    app.routes.append(
+    Mount("/", app=mcp_app))
+
+     app.router.routes.extend(mcp_app.routes)
 
     port = int(os.getenv("PORT", 8001))
 
