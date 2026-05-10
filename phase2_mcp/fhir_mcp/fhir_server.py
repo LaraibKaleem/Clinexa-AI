@@ -138,8 +138,9 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
     return json.dumps(bundle)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8001))
-    mcp.run(transport="http", host="0.0.0.0", port=port)    
+    import uvicorn
+    # port = int(os.getenv("PORT", 8001))
+    uvicorn.run(mcp, host="0.0.0.0", port=8001)    
     
 # """
 # Clinexa AI — MCP Server 1: FHIR R4 Server (WORKING — Official SDK)
