@@ -190,4 +190,5 @@ app = Starlette(routes=[
 if __name__ == "__main__":
     # port = int(os.getenv("PORT", 8001))
     import uvicorn
+    print(f"Routes registered: {[r.path for r in app.routes]}", flush=True)
     uvicorn.run(app, host="0.0.0.0", port=8001)
