@@ -167,7 +167,9 @@ if __name__ == "__main__":
     # For Railway deployment with PORT env var, use stdio or the CLI
 # 3. START server (creates endpoints, begins listening)
     # mcp.run(transport="sse", host="0.0.0.0", port=8001)
-    mcp.run(transport="sse", port=8001)
+    # mcp.run(transport="sse", port=8001)
+    mcp.run(transport="http", host="0.0.0.0", port=8001)
+    
 
 
 
