@@ -115,7 +115,6 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
     })
 
 if __name__ == "__main__":
-if __name__ == "__main__":
     import os
     import uvicorn
 
@@ -136,7 +135,7 @@ if __name__ == "__main__":
 
     mcp_app = mcp.sse_app()
 
-    app.router.extend(mcp_app.routes)
+    app.router.routes.extend(mcp_app.routes)
 
     port = int(os.getenv("PORT", 8001))
 
