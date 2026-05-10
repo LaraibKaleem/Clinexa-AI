@@ -1,10 +1,17 @@
+"""
+Clinexa AI — MCP Server 1: FHIR R4 Server (FIXED — Real MCP Protocol)
+ALL data is synthetic — zero real PHI
+"""
+
 from mcp.server.fastmcp import FastMCP
 import json, uuid
 from datetime import datetime
+import os
 
+# ─── Initialize FastMCP (this IS the MCP server) ─────────────────────────────
 mcp = FastMCP("clinexa-ai-fhir")
 
-# --- Your synthetic data (keep exactly as-is) ---
+# ─── Synthetic Patient Data (unchanged) ───────────────────────────────────────
 SYNTHETIC_PATIENTS = {
     "SYN-10001": {
         "id": "SYN-10001", "name": "Alex Johnson", "age": 68,
@@ -29,6 +36,7 @@ SYNTHETIC_PATIENTS = {
     }
 }
 
+# ─── FHIR Helper Functions (unchanged logic) ──────────────────────────────────
 def make_fhir_patient(p):
     return {
         "resourceType": "Patient",
@@ -84,10 +92,10 @@ def make_fhir_medications(patient_id, meds):
         "subject": {"reference": f"Patient/{patient_id}"}
     } for med in meds]
 
-# --- MCP Tools (decorated properly) ---
+# ─── MCP Tools (decorated with @mcp.tool — this exposes them via MCP protocol) ─
 
 @mcp.tool()
-def get_patient(patient_id: str) -> dict:
+def get_patient(patient_id: str) -> str:
     """Retrieve synthetic FHIR Patient resource by patient ID"""
     p = SYNTHETIC_PATIENTS.get(patient_id, {
         "id": patient_id, "name": f"Synthetic Patient {patient_id}", "age": 45,
@@ -95,41 +103,44 @@ def get_patient(patient_id: str) -> dict:
         "conditions": ["Unknown"], "medications": ["None"],
         "vitals": {"hr": 80, "sbp": 120, "dbp": 80, "temp": 37.0, "spo2": 97, "rr": 16}
     })
-    return make_fhir_patient(p)
+    return json.dumps(make_fhir_patient(p))
 
 @mcp.tool()
-def get_observations(patient_id: str) -> dict:
+def get_observations(patient_id: str) -> str:
     """Get vital signs for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
-    return {
+    bundle = {
         "resourceType": "Bundle", "type": "searchset",
         "entry": [{"resource": o} for o in make_fhir_observations(patient_id, p["vitals"])]
     }
+    return json.dumps(bundle)
 
 @mcp.tool()
-def get_conditions(patient_id: str) -> dict:
+def get_conditions(patient_id: str) -> str:
     """Get active conditions for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
-    return {
+    bundle = {
         "resourceType": "Bundle", "type": "searchset",
         "entry": [{"resource": c} for c in make_fhir_conditions(patient_id, p["conditions"])]
     }
+    return json.dumps(bundle)
 
 @mcp.tool()
-def get_medications(patient_id: str) -> dict:
+def get_medications(patient_id: str) -> str:
     """Get medications for a patient"""
     p = SYNTHETIC_PATIENTS.get(patient_id, list(SYNTHETIC_PATIENTS.values())[0])
-    return {
+    bundle = {
         "resourceType": "Bundle", "type": "searchset",
         "entry": [{"resource": m} for m in make_fhir_medications(patient_id, p["medications"])]
     }
+    return json.dumps(bundle)
 
 @mcp.tool()
-def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str, recommendations: list = None) -> dict:
+def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str, recommendations: list = None) -> str:
     """Create a FHIR Bundle containing triage assessment"""
     if recommendations is None:
         recommendations = []
-    return {
+    bundle = {
         "resourceType": "Bundle",
         "id": str(uuid.uuid4()),
         "type": "document",
@@ -149,12 +160,13 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
             }
         }]
     }
+    return json.dumps(bundle)
 
+# ─── Run Server ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # For Railway: use SSE transport on the PORT env variable
-    import os
     port = int(os.getenv("PORT", 8001))
-    mcp.run(transport="sse", port=port)
+    # SSE transport is most compatible with remote clients (Claude Desktop, etc.)
+    mcp.run(transport="sse", port=port, host="0.0.0.0")
 
 
 
