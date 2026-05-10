@@ -169,22 +169,47 @@ def create_triage_bundle(patient_id: str, risk_level: str, assessment_text: str,
 
 # ─── SSE Transport Setup (Official SDK Way) ───────────────────────────────────
 sse = SseServerTransport("/messages/")
-
 async def handle_sse(request):
-    async with sse.connect_session(request.scope, request.receive, request._send) as session:
-        await mcp.run(session.read, session.write, mcp.create_initialization_options())
-
+    async with sse.connect_sse(
+        request.scope,
+        request.receive,
+        request.send
+    ) as streams:
+        await mcp.run(
+            streams[0],
+            streams[1],
+            mcp.create_initialization_options()
+        )
 async def handle_messages(request):
-    await sse.handle_post_message(request.scope, request.receive, request._send)
-
+    await sse.handle_post_message(
+        request.scope,
+        request.receive,
+        request.send
+    )
 async def health_check(request):
     return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
 
 app = Starlette(routes=[
     Route("/", endpoint=health_check),
     Route("/sse", endpoint=handle_sse),
-    Route("/messages/", endpoint=handle_messages, methods=["POST"]),
+    Route("/messages", endpoint=handle_messages, methods=["POST"]),
 ])
+# async def handle_sse(request):
+#     async with sse.connect_session(request.scope, request.receive, request._send) as session:
+#         await mcp.run(session.read, session.write, mcp.create_initialization_options())
+
+# async def handle_messages(request):
+#     await sse.handle_post_message(request.scope, request.receive, request._send)
+
+# async def health_check(request):
+#     return JSONResponse({"status": "ok", "server": "clinexa-fhir", "tools": 5})
+
+# app = Starlette(routes=[
+#     Route("/", endpoint=health_check),
+#     Route("/sse", endpoint=handle_sse),
+#     Route("/messages/", endpoint=handle_messages, methods=["POST"]),
+# ])
+
 
 # ─── Run Server ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
