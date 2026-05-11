@@ -1,228 +1,417 @@
 """
-Clinexa AI — MCP Server 4: Grok LLM MCP
-Clinical text generation using xAI Grok
+Clinexa AI — MCP Server 4: Grok LLM Engine
+Generates clinical text (SOAP notes, care plans, triage summaries).
+Uses rule-based templates (synthetic — no real LLM API needed for demo).
 """
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-import httpx, json, os
+from fastmcp import FastMCP
+import json, os
+from datetime import datetime
 
-app = FastAPI(title="Clinexa AI Grok LLM MCP", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-GROK_API_KEY = os.getenv("GROK_API_KEY", "YOUR_GROK_API_KEY_HERE")
-GROK_BASE_URL = "https://api.x.ai/v1"
-GROK_MODEL = "grok-3-mini"
+mcp = FastMCP("clinexa-ai-grok")
 
-MCP_MANIFEST = {
-    "schema_version": "1.0",
-    "name": "clinexa-ai-grok-llm-mcp",
-    "display_name": "Clinexa AI Grok LLM Engine",
-    "description": "Clinical text generation using xAI Grok.",
-    "version": "1.0.0",
-    "tools": [
-        {
-            "name": "parse_patient_intake",
-            "description": "Parse free-text symptoms into structured clinical data",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "intake_text": {"type": "string"}
-                },
-                "required": ["intake_text"]
-            }
-        },
-        {
-            "name": "generate_soap_note",
-            "description": "Generate SOAP clinical note from assessment data",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "patient_id": {"type": "string"},
-                    "risk_level": {"type": "string"},
-                    "symptoms": {"type": "array", "items": {"type": "string"}},
-                    "vitals": {"type": "object"},
-                    "xai_explanation": {"type": "string"},
-                    "drug_safety_notes": {"type": "string"}
-                },
-                "required": ["patient_id", "risk_level", "symptoms", "vitals"]
-            }
-        },
-        {
-            "name": "generate_treatment_plan",
-            "description": "Generate treatment recommendations based on risk level",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "risk_level": {"type": "string"},
-                    "primary_symptoms": {"type": "array", "items": {"type": "string"}},
-                    "conditions": {"type": "array", "items": {"type": "string"}},
-                    "age": {"type": "integer"},
-                    "xai_top_factor": {"type": "string"}
-                },
-                "required": ["risk_level", "primary_symptoms"]
-            }
-        },
-        {
-            "name": "summarize_clinical_notes",
-            "description": "Summarize clinical notes into brief structured summary",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "notes_text": {"type": "string"},
-                    "max_words": {"type": "integer"}
-                },
-                "required": ["notes_text"]
-            }
-        }
-    ]
-}
+@mcp.tool()
+def generate_soap_note(patient_id: str, symptoms: str, risk_level: str, vitals: dict, assessment: str) -> str:
+    """Generate a clinical SOAP note from triage data"""
+    
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    
+    soap = f"""
+CLINEXA AI — AUTOMATED SOAP NOTE
+Patient ID: {patient_id}
+Generated: {now} UTC
+Data Source: 100% Synthetic (Zero PHI)
 
-async def call_grok(system_prompt, user_message):
-    headers = {
-        "Authorization": f"Bearer {GROK_API_KEY}",
-        "Content-Type": "application/json"
+═══════════════════════════════════════════════════════════════
+
+SUBJECTIVE:
+Patient presents with the following symptoms: {symptoms}
+Patient reports symptom onset and severity as documented in intake.
+
+OBJECTIVE:
+Vital Signs:
+• Heart Rate: {vitals.get('hr', 'N/A')} bpm
+• Blood Pressure: {vitals.get('sbp', 'N/A')}/{vitals.get('dbp', 'N/A')} mmHg
+• Temperature: {vitals.get('temp', 'N/A')} °C
+• SpO2: {vitals.get('spo2', 'N/A')}%
+• Respiratory Rate: {vitals.get('rr', 'N/A')}/min
+
+Risk Classification: {risk_level}
+AI Triage Assessment: {assessment}
+
+ASSESSMENT:
+Based on automated clinical triage analysis:
+• Risk Level: {risk_level}
+• Key Concerns: {assessment}
+• AI Recommendation: {"Immediate physician evaluation and possible ICU admission." if risk_level == "HIGH" else "Re-evaluation within 30-60 minutes with close monitoring." if risk_level == "MEDIUM" else "Routine monitoring per standard protocol."}
+
+PLAN:
+1. {"STAT physician consult" if risk_level == "HIGH" else "Reassess in 30-60 min" if risk_level == "MEDIUM" else "Continue standard care"}
+2. {"Continuous monitoring q15min" if risk_level == "HIGH" else "Vital signs q30min" if risk_level == "MEDIUM" else "Vital signs per protocol"}
+3. {"Prepare rapid intervention resources" if risk_level == "HIGH" else "Notify attending if deterioration" if risk_level == "MEDIUM" else "Patient education on warning signs"}
+4. Document all changes in EMR
+
+═══════════════════════════════════════════════════════════════
+Generated by Clinexa AI Multi-Agent System
+This note was auto-generated from synthetic data for demonstration.
+Verify all clinical findings before acting.
+"""
+    
+    return json.dumps({
+        "patient_id": patient_id,
+        "note_type": "SOAP",
+        "generated_at": now,
+        "content": soap.strip(),
+        "risk_level": risk_level,
+        "synthetic": True
+    })
+
+@mcp.tool()
+def generate_care_plan(patient_id: str, conditions: list, risk_level: str, medications: list) -> str:
+    """Generate an evidence-based care plan"""
+    
+    plan = {
+        "patient_id": patient_id,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "risk_level": risk_level,
+        "goals": [],
+        "interventions": [],
+        "monitoring": [],
+        "medications": medications,
+        "follow_up": ""
     }
-    payload = {
-        "model": GROK_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ],
-        "max_tokens": 800,
-        "temperature": 0.3
-    }
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(f"{GROK_BASE_URL}/chat/completions",
-                              headers=headers, json=payload)
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
+    
+    # Condition-specific goals
+    for condition in conditions:
+        cond_lower = condition.lower()
+        if "hypertension" in cond_lower:
+            plan["goals"].append("BP < 140/90 mmHg within 3 months")
+            plan["interventions"].append("Home BP monitoring daily, sodium restriction < 2g/day")
+        if "diabetes" in cond_lower:
+            plan["goals"].append("HbA1c < 7.0% within 6 months")
+            plan["interventions"].append("Glucose monitoring before meals, diabetic diet education")
+        if "asthma" in cond_lower:
+            plan["goals"].append("Zero exacerbations requiring ER visit")
+            plan["interventions"].append("Inhaler technique review, trigger identification, action plan")
+        if "copd" in cond_lower:
+            plan["goals"].append("mMRC dyspnea score ≤ 2")
+            plan["interventions"].append("Pulmonary rehab referral, smoking cessation if applicable")
+        if "coronary" in cond_lower:
+            plan["goals"].append("No recurrent chest pain at rest")
+            plan["interventions"].append("Cardiac rehab enrollment, statin optimization, aspirin 81mg daily")
+    
+    # Risk-level monitoring
+    if risk_level == "HIGH":
+        plan["monitoring"] = [
+            "Vital signs every 15 minutes",
+            "Continuous cardiac monitoring",
+            "Hourly neuro checks",
+            "Strict I&O monitoring"
+        ]
+        plan["follow_up"] = "ICU admission with cardiology consult within 1 hour"
+    elif risk_level == "MEDIUM":
+        plan["monitoring"] = [
+            "Vital signs every 30 minutes",
+            "Cardiac monitoring as indicated",
+            "Reassess every 1 hour"
+        ]
+        plan["follow_up"] = "Re-evaluation by attending within 2 hours, consider step-down"
+    else:
+        plan["monitoring"] = [
+            "Vital signs per unit protocol",
+            "Daily reassessment",
+            "Patient education on red flags"
+        ]
+        plan["follow_up"] = "Outpatient follow-up in 1-2 weeks or sooner if symptoms worsen"
+    
+    return json.dumps(plan)
 
-def fallback(tool, data):
-    if tool == "intake":
-        return json.dumps({
-            "chief_complaint": data.get("intake_text", "")[:100],
-            "symptoms_detected": ["symptom reported"],
-            "duration": "acute",
-            "severity": "moderate",
-            "structured": True
-        })
-    elif tool == "soap":
-        risk = data.get("risk_level", "MEDIUM")
-        vitals = data.get("vitals", {})
-        symptoms = data.get("symptoms", [])
-        plans = {
-            "HIGH": "IMMEDIATE: Activate emergency protocol. IV access, cardiac monitoring, stat labs.",
-            "MEDIUM": "URGENT: Physician evaluation within 2 hours. ECG, vitals q30min.",
-            "LOW": "ROUTINE: Follow-up within 48 hours. Patient education."
-        }
-        return f"""SOAP NOTE — Clinexa AI
-S: Patient presents with {', '.join(symptoms)}.
-O: HR {vitals.get('hr','--')} | BP {vitals.get('sbp','--')}/{vitals.get('dbp','--')} | SpO2 {vitals.get('spo2','--')}% | Temp {vitals.get('temp','--')}C
-A: AI Risk: {risk}. {data.get('xai_explanation','SHAP analysis complete.')}
-P: {plans.get(risk,'Evaluate per protocol.')}"""
-    elif tool == "treatment":
-        risk = data.get("risk_level", "MEDIUM")
-        plans = {
-            "HIGH": ["Activate emergency response", "IV access + monitoring",
-                     "Stat labs", "Specialist consult", "NPO status"],
-            "MEDIUM": ["Urgent evaluation within 2 hours", "12-lead ECG",
-                       "Basic metabolic panel", "Vitals q30min"],
-            "LOW": ["Routine follow-up 48 hours", "Symptom diary",
-                    "OTC care", "Return precautions"]
-        }
-        return json.dumps({
-            "recommendations": plans.get(risk, []),
-            "urgency": risk,
-            "follow_up": "Per clinical judgment"
-        })
-    return "Clinical analysis complete."
+@mcp.tool()
+def summarize_for_handoff(patient_id: str, risk_level: str, key_findings: list, pending_actions: list) -> str:
+    """Generate a shift handoff summary"""
+    
+    summary = f"""
+═══════════════════════════════════════════════════════════════
+CLINEXA AI — SHIFT HANDOFF SUMMARY
+Patient: {patient_id}
+Risk Level: {risk_level}
+Generated: {datetime.utcnow().strftime('%H:%M')} UTC
 
-@app.get("/")
-def root():
-    return {"status": "running Clinexa AI Grok LLM MCP"}
+SITUATION:
+Patient classified as {risk_level} RISK based on AI triage.
+
+BACKGROUND:
+Key clinical findings:
+"""
+    
+    for finding in key_findings:
+        summary += f"• {finding}\n"
+    
+    summary += f"""
+ASSESSMENT:
+AI-predicted risk score indicates {"immediate intervention needed" if risk_level == "HIGH" else "close monitoring required" if risk_level == "MEDIUM" else "stable condition"}.
+
+RECOMMENDATION / PENDING:
+"""
+    
+    for action in pending_actions:
+        summary += f"• {action}\n"
+    
+    summary += f"""
+CONTACT:
+On-call Clinexa AI System
+Status: Active Monitoring
+
+═══════════════════════════════════════════════════════════════
+"""
+    
+    return json.dumps({
+        "patient_id": patient_id,
+        "summary_type": "shift_handoff",
+        "content": summary.strip(),
+        "risk_level": risk_level,
+        "synthetic": True
+    })
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8004"))
+    mcp.run(transport="http", host="0.0.0.0", port=port)
+
+
+
+
+
+
+
+
+
+
+# ////////////////////////////////////////////////////////////
+# """
+# Clinexa AI — MCP Server 4: Grok LLM MCP
+# Clinical text generation using xAI Grok
+# """
+
+# from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
+# import httpx, json, os
+
+# app = FastAPI(title="Clinexa AI Grok LLM MCP", version="1.0.0")
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+# GROK_API_KEY = os.getenv("GROK_API_KEY", "YOUR_GROK_API_KEY_HERE")
+# GROK_BASE_URL = "https://api.x.ai/v1"
+# GROK_MODEL = "grok-3-mini"
+
+# MCP_MANIFEST = {
+#     "schema_version": "1.0",
+#     "name": "clinexa-ai-grok-llm-mcp",
+#     "display_name": "Clinexa AI Grok LLM Engine",
+#     "description": "Clinical text generation using xAI Grok.",
+#     "version": "1.0.0",
+#     "tools": [
+#         {
+#             "name": "parse_patient_intake",
+#             "description": "Parse free-text symptoms into structured clinical data",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "intake_text": {"type": "string"}
+#                 },
+#                 "required": ["intake_text"]
+#             }
+#         },
+#         {
+#             "name": "generate_soap_note",
+#             "description": "Generate SOAP clinical note from assessment data",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "patient_id": {"type": "string"},
+#                     "risk_level": {"type": "string"},
+#                     "symptoms": {"type": "array", "items": {"type": "string"}},
+#                     "vitals": {"type": "object"},
+#                     "xai_explanation": {"type": "string"},
+#                     "drug_safety_notes": {"type": "string"}
+#                 },
+#                 "required": ["patient_id", "risk_level", "symptoms", "vitals"]
+#             }
+#         },
+#         {
+#             "name": "generate_treatment_plan",
+#             "description": "Generate treatment recommendations based on risk level",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "risk_level": {"type": "string"},
+#                     "primary_symptoms": {"type": "array", "items": {"type": "string"}},
+#                     "conditions": {"type": "array", "items": {"type": "string"}},
+#                     "age": {"type": "integer"},
+#                     "xai_top_factor": {"type": "string"}
+#                 },
+#                 "required": ["risk_level", "primary_symptoms"]
+#             }
+#         },
+#         {
+#             "name": "summarize_clinical_notes",
+#             "description": "Summarize clinical notes into brief structured summary",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "notes_text": {"type": "string"},
+#                     "max_words": {"type": "integer"}
+#                 },
+#                 "required": ["notes_text"]
+#             }
+#         }
+#     ]
+# }
+
+# async def call_grok(system_prompt, user_message):
+#     headers = {
+#         "Authorization": f"Bearer {GROK_API_KEY}",
+#         "Content-Type": "application/json"
+#     }
+#     payload = {
+#         "model": GROK_MODEL,
+#         "messages": [
+#             {"role": "system", "content": system_prompt},
+#             {"role": "user", "content": user_message}
+#         ],
+#         "max_tokens": 800,
+#         "temperature": 0.3
+#     }
+#     async with httpx.AsyncClient(timeout=30.0) as client:
+#         r = await client.post(f"{GROK_BASE_URL}/chat/completions",
+#                               headers=headers, json=payload)
+#         r.raise_for_status()
+#         return r.json()["choices"][0]["message"]["content"]
+
+# def fallback(tool, data):
+#     if tool == "intake":
+#         return json.dumps({
+#             "chief_complaint": data.get("intake_text", "")[:100],
+#             "symptoms_detected": ["symptom reported"],
+#             "duration": "acute",
+#             "severity": "moderate",
+#             "structured": True
+#         })
+#     elif tool == "soap":
+#         risk = data.get("risk_level", "MEDIUM")
+#         vitals = data.get("vitals", {})
+#         symptoms = data.get("symptoms", [])
+#         plans = {
+#             "HIGH": "IMMEDIATE: Activate emergency protocol. IV access, cardiac monitoring, stat labs.",
+#             "MEDIUM": "URGENT: Physician evaluation within 2 hours. ECG, vitals q30min.",
+#             "LOW": "ROUTINE: Follow-up within 48 hours. Patient education."
+#         }
+#         return f"""SOAP NOTE — Clinexa AI
+# S: Patient presents with {', '.join(symptoms)}.
+# O: HR {vitals.get('hr','--')} | BP {vitals.get('sbp','--')}/{vitals.get('dbp','--')} | SpO2 {vitals.get('spo2','--')}% | Temp {vitals.get('temp','--')}C
+# A: AI Risk: {risk}. {data.get('xai_explanation','SHAP analysis complete.')}
+# P: {plans.get(risk,'Evaluate per protocol.')}"""
+#     elif tool == "treatment":
+#         risk = data.get("risk_level", "MEDIUM")
+#         plans = {
+#             "HIGH": ["Activate emergency response", "IV access + monitoring",
+#                      "Stat labs", "Specialist consult", "NPO status"],
+#             "MEDIUM": ["Urgent evaluation within 2 hours", "12-lead ECG",
+#                        "Basic metabolic panel", "Vitals q30min"],
+#             "LOW": ["Routine follow-up 48 hours", "Symptom diary",
+#                     "OTC care", "Return precautions"]
+#         }
+#         return json.dumps({
+#             "recommendations": plans.get(risk, []),
+#             "urgency": risk,
+#             "follow_up": "Per clinical judgment"
+#         })
+#     return "Clinical analysis complete."
+
+# @app.get("/")
+# def root():
+#     return {"status": "running Clinexa AI Grok LLM MCP"}
+
+# # @app.get("/.well-known/mcp.json")
+# # @app.post("/.well-known/mcp.json")
+# # def manifest():
+# #     return MCP_MANIFEST
+
+# @app.get("/health")
+# def health():
+#     api_ready = GROK_API_KEY != "YOUR_GROK_API_KEY_HERE"
+#     return {"status": "ok", "grok_configured": api_ready}
 
 # @app.get("/.well-known/mcp.json")
 # @app.post("/.well-known/mcp.json")
 # def manifest():
 #     return MCP_MANIFEST
 
-@app.get("/health")
-def health():
-    api_ready = GROK_API_KEY != "YOUR_GROK_API_KEY_HERE"
-    return {"status": "ok", "grok_configured": api_ready}
+# @app.post("/tools/parse_patient_intake")
+# async def parse_patient_intake(body: dict):
+#     text = body.get("intake_text", "")
+#     system = """You are a clinical intake parser. Extract structured info from patient symptoms.
+# Return ONLY valid JSON with keys: chief_complaint, symptoms_detected (list),
+# duration, severity, structured (true)."""
+#     try:
+#         result = await call_grok(system, f"Parse this: {text}")
+#         return json.loads(result)
+#     except Exception:
+#         return json.loads(fallback("intake", {"intake_text": text}))
 
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def manifest():
-    return MCP_MANIFEST
+# @app.post("/tools/generate_soap_note")
+# async def generate_soap_note(body: dict):
+#     system = """You are a clinical documentation AI. Generate professional SOAP notes.
+# Format: S (Subjective), O (Objective), A (Assessment), P (Plan). Max 250 words."""
+#     user_msg = f"""Generate SOAP note:
+# Patient: {body.get('patient_id')}
+# Risk: {body.get('risk_level')}
+# Symptoms: {', '.join(body.get('symptoms', []))}
+# Vitals: {json.dumps(body.get('vitals', {}))}
+# AI Explanation: {body.get('xai_explanation', 'N/A')}
+# Drug Notes: {body.get('drug_safety_notes', 'None')}"""
+#     try:
+#         return {"soap_note": await call_grok(system, user_msg)}
+#     except Exception:
+#         return {"soap_note": fallback("soap", body)}
 
-@app.post("/tools/parse_patient_intake")
-async def parse_patient_intake(body: dict):
-    text = body.get("intake_text", "")
-    system = """You are a clinical intake parser. Extract structured info from patient symptoms.
-Return ONLY valid JSON with keys: chief_complaint, symptoms_detected (list),
-duration, severity, structured (true)."""
-    try:
-        result = await call_grok(system, f"Parse this: {text}")
-        return json.loads(result)
-    except Exception:
-        return json.loads(fallback("intake", {"intake_text": text}))
+# @app.post("/tools/generate_treatment_plan")
+# async def generate_treatment_plan(body: dict):
+#     system = """You are a clinical decision support AI. Generate evidence-based treatment plans.
+# Return JSON with keys: recommendations (list), urgency, follow_up, red_flags (list)."""
+#     user_msg = f"""Treatment plan for:
+# Risk: {body.get('risk_level')}
+# Symptoms: {', '.join(body.get('primary_symptoms', []))}
+# Conditions: {', '.join(body.get('conditions', ['none']))}
+# Age: {body.get('age', 'unknown')}
+# Top AI Factor: {body.get('xai_top_factor', 'N/A')}"""
+#     try:
+#         result = await call_grok(system, user_msg)
+#         return json.loads(result)
+#     except Exception:
+#         return json.loads(fallback("treatment", body))
 
-@app.post("/tools/generate_soap_note")
-async def generate_soap_note(body: dict):
-    system = """You are a clinical documentation AI. Generate professional SOAP notes.
-Format: S (Subjective), O (Objective), A (Assessment), P (Plan). Max 250 words."""
-    user_msg = f"""Generate SOAP note:
-Patient: {body.get('patient_id')}
-Risk: {body.get('risk_level')}
-Symptoms: {', '.join(body.get('symptoms', []))}
-Vitals: {json.dumps(body.get('vitals', {}))}
-AI Explanation: {body.get('xai_explanation', 'N/A')}
-Drug Notes: {body.get('drug_safety_notes', 'None')}"""
-    try:
-        return {"soap_note": await call_grok(system, user_msg)}
-    except Exception:
-        return {"soap_note": fallback("soap", body)}
+# @app.post("/tools/summarize_clinical_notes")
+# async def summarize_clinical_notes(body: dict):
+#     notes = body.get("notes_text", "")
+#     max_words = body.get("max_words", 150)
+#     system = f"Summarize clinical notes in max {max_words} words. Keep key findings and action items."
+#     try:
+#         summary = await call_grok(system, f"Summarize: {notes}")
+#         return {"summary": summary}
+#     except Exception:
+#         return {"summary": notes[:500]}
 
-@app.post("/tools/generate_treatment_plan")
-async def generate_treatment_plan(body: dict):
-    system = """You are a clinical decision support AI. Generate evidence-based treatment plans.
-Return JSON with keys: recommendations (list), urgency, follow_up, red_flags (list)."""
-    user_msg = f"""Treatment plan for:
-Risk: {body.get('risk_level')}
-Symptoms: {', '.join(body.get('primary_symptoms', []))}
-Conditions: {', '.join(body.get('conditions', ['none']))}
-Age: {body.get('age', 'unknown')}
-Top AI Factor: {body.get('xai_top_factor', 'N/A')}"""
-    try:
-        result = await call_grok(system, user_msg)
-        return json.loads(result)
-    except Exception:
-        return json.loads(fallback("treatment", body))
-
-@app.post("/tools/summarize_clinical_notes")
-async def summarize_clinical_notes(body: dict):
-    notes = body.get("notes_text", "")
-    max_words = body.get("max_words", 150)
-    system = f"Summarize clinical notes in max {max_words} words. Keep key findings and action items."
-    try:
-        summary = await call_grok(system, f"Summarize: {notes}")
-        return {"summary": summary}
-    except Exception:
-        return {"summary": notes[:500]}
-
+# # if __name__ == "__main__":
+# #     import uvicorn
+# #     uvicorn.run(app, host="0.0.0.0", port=8004)
 # if __name__ == "__main__":
 #     import uvicorn
+#     import os
+#     # port = int(os.getenv("PORT", 8004))
+#     # uvicorn.run(app, host="0.0.0.0", port=port)
 #     uvicorn.run(app, host="0.0.0.0", port=8004)
-if __name__ == "__main__":
-    import uvicorn
-    import os
-    # port = int(os.getenv("PORT", 8004))
-    # uvicorn.run(app, host="0.0.0.0", port=port)
-    uvicorn.run(app, host="0.0.0.0", port=8004)

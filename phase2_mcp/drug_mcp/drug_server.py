@@ -1,213 +1,355 @@
 """
-Clinexa AI — MCP Server 2: Drug Safety MCP
-Checks drug interactions and allergy risks
+Clinexa AI — MCP Server 2: Drug Safety Checker
+Checks for dangerous drug interactions. ALL synthetic data.
 """
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-import httpx
+from fastmcp import FastMCP
+import json, os
 
-app = FastAPI(title="Clinexa AI Drug Safety MCP", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+mcp = FastMCP("clinexa-ai-drug-safety")
 
-MCP_MANIFEST = {
-    "schema_version": "1.0",
-    "name": "clinexa-ai-drug-safety-mcp",
-    "display_name": "Clinexa AI Drug Safety Checker",
-    "description": "Checks drug interactions, contraindications, and allergy risks.",
-    "version": "1.0.0",
-    "tools": [
-        {
-            "name": "check_drug_interactions",
-            "description": "Check for known interactions between two or more drugs",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "drugs": {"type": "array", "items": {"type": "string"}}
-                },
-                "required": ["drugs"]
-            }
-        },
-        {
-            "name": "get_drug_warnings",
-            "description": "Get black box warnings for a drug",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "drug_name": {"type": "string"}
-                },
-                "required": ["drug_name"]
-            }
-        },
-        {
-            "name": "check_allergy_risk",
-            "description": "Check if patient allergies conflict with medications",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "medications": {"type": "array", "items": {"type": "string"}},
-                    "allergies": {"type": "array", "items": {"type": "string"}}
-                },
-                "required": ["medications", "allergies"]
-            }
-        }
-    ]
-}
-
-KNOWN_INTERACTIONS = {
+# Known dangerous interactions
+DRUG_INTERACTIONS = {
     ("warfarin", "aspirin"): {
         "severity": "HIGH",
-        "description": "Increased bleeding risk.",
-        "recommendation": "Monitor INR closely."
+        "mechanism": "Increased bleeding risk — anticoagulant + antiplatelet",
+        "recommendation": "Avoid combination unless strictly monitored. Consider alternative anticoagulant or antiplatelet."
     },
-    ("metformin", "alcohol"): {
-        "severity": "MEDIUM",
-        "description": "Increased risk of lactic acidosis.",
-        "recommendation": "Advise patient to avoid alcohol."
-    },
-    ("lisinopril", "potassium"): {
-        "severity": "MEDIUM",
-        "description": "ACE inhibitors can increase potassium levels.",
-        "recommendation": "Monitor serum potassium levels."
-    },
-    ("atorvastatin", "clarithromycin"): {
+    ("warfarin", "ibuprofen"): {
         "severity": "HIGH",
-        "description": "Increased statin levels, risk of myopathy.",
-        "recommendation": "Temporarily discontinue statin."
+        "mechanism": "NSAID increases warfarin effect + gastric bleeding risk",
+        "recommendation": "Use acetaminophen for pain instead. If NSAID required, use lowest dose with GI protection."
     },
-    ("insulin", "beta_blockers"): {
+    ("metformin", "contrast dye"): {
         "severity": "MEDIUM",
-        "description": "Beta-blockers can mask hypoglycemia symptoms.",
-        "recommendation": "Educate patient on signs of hypoglycemia."
+        "mechanism": "Risk of lactic acidosis with iodinated contrast",
+        "recommendation": "Hold metformin 48 hours before and after contrast procedure. Monitor renal function."
     },
+    ("lisinopril", "spironolactone"): {
+        "severity": "HIGH",
+        "mechanism": "Dual potassium retention — risk of hyperkalemia",
+        "recommendation": "Monitor potassium closely. Consider alternative antihypertensive."
+    },
+    ("simvastatin", "clarithromycin"): {
+        "severity": "HIGH",
+        "mechanism": "CYP3A4 inhibition increases statin levels — rhabdomyolysis risk",
+        "recommendation": "Hold statin during antibiotic course or switch to pravastatin."
+    },
+    ("digoxin", "amiodarone"): {
+        "severity": "HIGH",
+        "mechanism": "Amiodarone increases digoxin levels by 70-100%",
+        "recommendation": "Reduce digoxin dose by 50% and monitor levels weekly."
+    }
 }
 
-ALLERGY_CROSS_REACTIONS = {
-    "penicillin": ["amoxicillin", "ampicillin", "piperacillin"],
-    "sulfa": ["sulfamethoxazole", "trimethoprim"],
-    "nsaid": ["ibuprofen", "naproxen", "aspirin", "celecoxib"],
-}
+@mcp.tool()
+def check_interaction(drug_a: str, drug_b: str) -> str:
+    """Check for dangerous interaction between two drugs"""
+    key = (drug_a.lower().strip(), drug_b.lower().strip())
+    reverse_key = (key[1], key[0])
+    
+    result = DRUG_INTERACTIONS.get(key) or DRUG_INTERACTIONS.get(reverse_key)
+    
+    if result:
+        return json.dumps({
+            "interaction_found": True,
+            "drug_a": drug_a,
+            "drug_b": drug_b,
+            **result
+        })
+    
+    return json.dumps({
+        "interaction_found": False,
+        "drug_a": drug_a,
+        "drug_b": drug_b,
+        "message": "No known major interaction between these drugs."
+    })
 
-def check_interactions_local(drugs):
-    interactions = []
-    drugs_lower = [d.lower().strip() for d in drugs]
-    for i in range(len(drugs_lower)):
-        for j in range(i + 1, len(drugs_lower)):
-            pair = (drugs_lower[i], drugs_lower[j])
-            pair_rev = (drugs_lower[j], drugs_lower[i])
-            if pair in KNOWN_INTERACTIONS:
-                interactions.append({"drugs": list(pair), **KNOWN_INTERACTIONS[pair]})
-            elif pair_rev in KNOWN_INTERACTIONS:
-                interactions.append({"drugs": list(pair_rev), **KNOWN_INTERACTIONS[pair_rev]})
-    return interactions
+@mcp.tool()
+def check_patient_medications(medications: list) -> str:
+    """Check all medication pairs in a patient's list for interactions"""
+    alerts = []
+    checked = set()
+    
+    for i, med_a in enumerate(medications):
+        for med_b in medications[i+1:]:
+            key = tuple(sorted([med_a.lower().strip(), med_b.lower().strip()]))
+            if key in checked:
+                continue
+            checked.add(key)
+            
+            interaction = DRUG_INTERACTIONS.get(key)
+            if interaction:
+                alerts.append({
+                    "drug_pair": [med_a, med_b],
+                    **interaction
+                })
+    
+    return json.dumps({
+        "total_medications": len(medications),
+        "interactions_found": len(alerts),
+        "alerts": alerts,
+        "safe_to_prescribe": len(alerts) == 0
+    })
 
-@app.get("/")
-def root():
-    return {"status": "running Clinexa AI Drug Safety MCP"}
+@mcp.tool()
+def get_safety_profile(drug_name: str) -> str:
+    """Get known safety profile and major contraindications for a drug"""
+    profiles = {
+        "warfarin": {
+            "category": "Anticoagulant",
+            "major_interactions": ["aspirin", "ibuprofen", "amiodarone", "metronidazole"],
+            "monitoring": "INR every 1-4 weeks",
+            "contraindications": ["pregnancy", "active bleeding", "recent surgery"]
+        },
+        "aspirin": {
+            "category": "Antiplatelet",
+            "major_interactions": ["warfarin", "ibuprofen", "methotrexate"],
+            "monitoring": "Occult blood testing if GI symptoms",
+            "contraindications": ["bleeding disorders", "children with viral illness"]
+        },
+        "metformin": {
+            "category": "Antidiabetic",
+            "major_interactions": ["contrast dye", "iodinated contrast"],
+            "monitoring": "eGFR annually, B12 every 2-3 years",
+            "contraindications": ["eGFR < 30", "acute illness with dehydration"]
+        },
+        "lisinopril": {
+            "category": "ACE Inhibitor",
+            "major_interactions": ["spironolactone", "potassium supplements", "NSAIDs"],
+            "monitoring": "Potassium, creatinine within 1-2 weeks of initiation",
+            "contraindications": ["pregnancy", "angioedema history", "bilateral renal stenosis"]
+        }
+    }
+    
+    profile = profiles.get(drug_name.lower().strip(), {
+        "category": "Unknown",
+        "major_interactions": [],
+        "monitoring": "Consult pharmacist",
+        "contraindications": []
+    })
+    
+    return json.dumps({
+        "drug": drug_name,
+        **profile
+    })
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8002"))
+    mcp.run(transport="http", host="0.0.0.0", port=port)
+
+
+# ///////////////////////////
+# """
+# Clinexa AI — MCP Server 2: Drug Safety MCP
+# Checks drug interactions and allergy risks
+# """
+
+# from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
+# import httpx
+
+# app = FastAPI(title="Clinexa AI Drug Safety MCP", version="1.0.0")
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# MCP_MANIFEST = {
+#     "schema_version": "1.0",
+#     "name": "clinexa-ai-drug-safety-mcp",
+#     "display_name": "Clinexa AI Drug Safety Checker",
+#     "description": "Checks drug interactions, contraindications, and allergy risks.",
+#     "version": "1.0.0",
+#     "tools": [
+#         {
+#             "name": "check_drug_interactions",
+#             "description": "Check for known interactions between two or more drugs",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "drugs": {"type": "array", "items": {"type": "string"}}
+#                 },
+#                 "required": ["drugs"]
+#             }
+#         },
+#         {
+#             "name": "get_drug_warnings",
+#             "description": "Get black box warnings for a drug",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "drug_name": {"type": "string"}
+#                 },
+#                 "required": ["drug_name"]
+#             }
+#         },
+#         {
+#             "name": "check_allergy_risk",
+#             "description": "Check if patient allergies conflict with medications",
+#             "input_schema": {
+#                 "type": "object",
+#                 "properties": {
+#                     "medications": {"type": "array", "items": {"type": "string"}},
+#                     "allergies": {"type": "array", "items": {"type": "string"}}
+#                 },
+#                 "required": ["medications", "allergies"]
+#             }
+#         }
+#     ]
+# }
+
+# KNOWN_INTERACTIONS = {
+#     ("warfarin", "aspirin"): {
+#         "severity": "HIGH",
+#         "description": "Increased bleeding risk.",
+#         "recommendation": "Monitor INR closely."
+#     },
+#     ("metformin", "alcohol"): {
+#         "severity": "MEDIUM",
+#         "description": "Increased risk of lactic acidosis.",
+#         "recommendation": "Advise patient to avoid alcohol."
+#     },
+#     ("lisinopril", "potassium"): {
+#         "severity": "MEDIUM",
+#         "description": "ACE inhibitors can increase potassium levels.",
+#         "recommendation": "Monitor serum potassium levels."
+#     },
+#     ("atorvastatin", "clarithromycin"): {
+#         "severity": "HIGH",
+#         "description": "Increased statin levels, risk of myopathy.",
+#         "recommendation": "Temporarily discontinue statin."
+#     },
+#     ("insulin", "beta_blockers"): {
+#         "severity": "MEDIUM",
+#         "description": "Beta-blockers can mask hypoglycemia symptoms.",
+#         "recommendation": "Educate patient on signs of hypoglycemia."
+#     },
+# }
+
+# ALLERGY_CROSS_REACTIONS = {
+#     "penicillin": ["amoxicillin", "ampicillin", "piperacillin"],
+#     "sulfa": ["sulfamethoxazole", "trimethoprim"],
+#     "nsaid": ["ibuprofen", "naproxen", "aspirin", "celecoxib"],
+# }
+
+# def check_interactions_local(drugs):
+#     interactions = []
+#     drugs_lower = [d.lower().strip() for d in drugs]
+#     for i in range(len(drugs_lower)):
+#         for j in range(i + 1, len(drugs_lower)):
+#             pair = (drugs_lower[i], drugs_lower[j])
+#             pair_rev = (drugs_lower[j], drugs_lower[i])
+#             if pair in KNOWN_INTERACTIONS:
+#                 interactions.append({"drugs": list(pair), **KNOWN_INTERACTIONS[pair]})
+#             elif pair_rev in KNOWN_INTERACTIONS:
+#                 interactions.append({"drugs": list(pair_rev), **KNOWN_INTERACTIONS[pair_rev]})
+#     return interactions
+
+# @app.get("/")
+# def root():
+#     return {"status": "running Clinexa AI Drug Safety MCP"}
+
+# # @app.get("/.well-known/mcp.json")
+# # @app.post("/.well-known/mcp.json")
+# # def manifest():
+# #     return MCP_MANIFEST
+
+# @app.get("/health")
+# def health():
+#     return {"status": "ok", "server": "clinexa-ai-drug-safety-mcp"}
 
 # @app.get("/.well-known/mcp.json")
 # @app.post("/.well-known/mcp.json")
 # def manifest():
 #     return MCP_MANIFEST
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "server": "clinexa-ai-drug-safety-mcp"}
+# @app.post("/tools/check_drug_interactions")
+# async def check_drug_interactions(body: dict):
+#     drugs = body.get("drugs", [])
+#     if len(drugs) < 2:
+#         return {"interactions": [], "message": "Provide at least 2 drugs."}
+#     interactions = []
+#     try:
+#         async with httpx.AsyncClient(timeout=5.0) as client:
+#             for drug in drugs[:3]:
+#                 url = f"https://api.fda.gov/drug/label.json?search=drug_interactions:{drug}&limit=1"
+#                 r = await client.get(url)
+#                 if r.status_code == 200:
+#                     data = r.json()
+#                     results = data.get("results", [])
+#                     if results and "drug_interactions" in results[0]:
+#                         text = results[0]["drug_interactions"][0][:300]
+#                         interactions.append({
+#                             "drugs": [drug],
+#                             "severity": "REVIEW",
+#                             "description": text,
+#                             "source": "OpenFDA"
+#                         })
+#     except Exception:
+#         pass
+#     local = check_interactions_local(drugs)
+#     interactions.extend(local)
+#     return {
+#         "checked_drugs": drugs,
+#         "interactions_found": len(interactions),
+#         "interactions": interactions,
+#         "safe": len(interactions) == 0,
+#         "summary": f"Found {len(interactions)} interaction(s)."
+#     }
 
-@app.get("/.well-known/mcp.json")
-@app.post("/.well-known/mcp.json")
-def manifest():
-    return MCP_MANIFEST
+# @app.post("/tools/get_drug_warnings")
+# async def get_drug_warnings(body: dict):
+#     drug = body.get("drug_name", "")
+#     warnings_list = []
+#     try:
+#         async with httpx.AsyncClient(timeout=5.0) as client:
+#             url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{drug}&limit=1"
+#             r = await client.get(url)
+#             if r.status_code == 200:
+#                 data = r.json()
+#                 results = data.get("results", [])
+#                 if results:
+#                     res = results[0]
+#                     if "boxed_warning" in res:
+#                         warnings_list.append({"type": "BLACK_BOX", "text": res["boxed_warning"][0][:400]})
+#                     if "warnings" in res:
+#                         warnings_list.append({"type": "WARNING", "text": res["warnings"][0][:400]})
+#     except Exception:
+#         warnings_list.append({"type": "INFO", "text": f"No FDA data for {drug}."})
+#     return {"drug": drug, "warnings_count": len(warnings_list), "warnings": warnings_list}
 
-@app.post("/tools/check_drug_interactions")
-async def check_drug_interactions(body: dict):
-    drugs = body.get("drugs", [])
-    if len(drugs) < 2:
-        return {"interactions": [], "message": "Provide at least 2 drugs."}
-    interactions = []
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            for drug in drugs[:3]:
-                url = f"https://api.fda.gov/drug/label.json?search=drug_interactions:{drug}&limit=1"
-                r = await client.get(url)
-                if r.status_code == 200:
-                    data = r.json()
-                    results = data.get("results", [])
-                    if results and "drug_interactions" in results[0]:
-                        text = results[0]["drug_interactions"][0][:300]
-                        interactions.append({
-                            "drugs": [drug],
-                            "severity": "REVIEW",
-                            "description": text,
-                            "source": "OpenFDA"
-                        })
-    except Exception:
-        pass
-    local = check_interactions_local(drugs)
-    interactions.extend(local)
-    return {
-        "checked_drugs": drugs,
-        "interactions_found": len(interactions),
-        "interactions": interactions,
-        "safe": len(interactions) == 0,
-        "summary": f"Found {len(interactions)} interaction(s)."
-    }
+# @app.post("/tools/check_allergy_risk")
+# def check_allergy_risk(body: dict):
+#     medications = [m.lower() for m in body.get("medications", [])]
+#     allergies = [a.lower() for a in body.get("allergies", [])]
+#     risks = []
+#     for allergy in allergies:
+#         cross_react = ALLERGY_CROSS_REACTIONS.get(allergy, [])
+#         for med in medications:
+#             if allergy in med or any(cr in med for cr in cross_react):
+#                 risks.append({
+#                     "allergy": allergy,
+#                     "conflicting_medication": med,
+#                     "severity": "HIGH",
+#                     "recommendation": f"Patient allergic to {allergy}. {med} may cause reaction."
+#                 })
+#     return {
+#         "allergy_risks_found": len(risks),
+#         "risks": risks,
+#         "safe": len(risks) == 0,
+#         "summary": "No allergy conflicts found." if not risks else f"{len(risks)} conflict(s) detected!"
+#     }
 
-@app.post("/tools/get_drug_warnings")
-async def get_drug_warnings(body: dict):
-    drug = body.get("drug_name", "")
-    warnings_list = []
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            url = f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{drug}&limit=1"
-            r = await client.get(url)
-            if r.status_code == 200:
-                data = r.json()
-                results = data.get("results", [])
-                if results:
-                    res = results[0]
-                    if "boxed_warning" in res:
-                        warnings_list.append({"type": "BLACK_BOX", "text": res["boxed_warning"][0][:400]})
-                    if "warnings" in res:
-                        warnings_list.append({"type": "WARNING", "text": res["warnings"][0][:400]})
-    except Exception:
-        warnings_list.append({"type": "INFO", "text": f"No FDA data for {drug}."})
-    return {"drug": drug, "warnings_count": len(warnings_list), "warnings": warnings_list}
-
-@app.post("/tools/check_allergy_risk")
-def check_allergy_risk(body: dict):
-    medications = [m.lower() for m in body.get("medications", [])]
-    allergies = [a.lower() for a in body.get("allergies", [])]
-    risks = []
-    for allergy in allergies:
-        cross_react = ALLERGY_CROSS_REACTIONS.get(allergy, [])
-        for med in medications:
-            if allergy in med or any(cr in med for cr in cross_react):
-                risks.append({
-                    "allergy": allergy,
-                    "conflicting_medication": med,
-                    "severity": "HIGH",
-                    "recommendation": f"Patient allergic to {allergy}. {med} may cause reaction."
-                })
-    return {
-        "allergy_risks_found": len(risks),
-        "risks": risks,
-        "safe": len(risks) == 0,
-        "summary": "No allergy conflicts found." if not risks else f"{len(risks)} conflict(s) detected!"
-    }
-
-if __name__ == "__main__":
-    # import uvicorn
-    # uvicorn.run(app, host="0.0.0.0", port=8002)
+# if __name__ == "__main__":
+#     # import uvicorn
+#     # uvicorn.run(app, host="0.0.0.0", port=8002)
     
-    import uvicorn
-    import os
-    # port = int(os.getenv("PORT", 8002))
-    # uvicorn.run(app, host="0.0.0.0", port=port)
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+#     import uvicorn
+#     import os
+#     # port = int(os.getenv("PORT", 8002))
+#     # uvicorn.run(app, host="0.0.0.0", port=port)
+#     uvicorn.run(app, host="0.0.0.0", port=8002)
