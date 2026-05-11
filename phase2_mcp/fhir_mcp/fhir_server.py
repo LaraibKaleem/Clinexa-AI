@@ -262,7 +262,6 @@ def get_manifest():
     
 
 @app.get("/health")
-
 def health():
     return {"status": "ok", "server": "clinexa-ai-fhir-mcp"}
 
