@@ -174,8 +174,8 @@ Status: Active Monitoring
     })
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8004"))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+    # port = int(os.getenv("PORT", "8004"))
+    mcp.run(transport="http", host="0.0.0.0", port=8004)
 
 
 

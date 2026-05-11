@@ -209,8 +209,10 @@ def get_feature_importance() -> str:
     })
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8003"))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+
+    # port = int(os.getenv("PORT", "8003"))
+    mcp.run(transport="http", host="0.0.0.0", port=8003)
+
 # /////////////////////////////////////////////
 # """
 # Clinexa AI — MCP Server 3: XAI Explainability MCP

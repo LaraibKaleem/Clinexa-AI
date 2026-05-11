@@ -135,8 +135,8 @@ def get_safety_profile(drug_name: str) -> str:
     })
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8002"))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+    # port = int(os.getenv("PORT", "8002"))
+    mcp.run(transport="http", host="0.0.0.0", port=8002)
 
 
 # ///////////////////////////
